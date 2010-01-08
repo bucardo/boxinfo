@@ -2562,7 +2562,7 @@ sub html_postgres_config {
     ## S = skip it
 
 my $pg_settings = q{
-D add_missing_from                | off_______________
+D add_missing_from                | off               
 D allow_system_table_mods         | off               
 D application_name                |                   
 D archive_command                 | (disabled)        
