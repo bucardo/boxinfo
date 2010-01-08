@@ -15,7 +15,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.3';
+our $VERSION = '1.1.4';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -2402,8 +2402,6 @@ sub html_perlinfo {
     else {
         print qq{<tr><td>IThreads:</td><td><b>$data{perl}{ithreads}</b></td></tr>\n};
     }
-    print qq{<tr><td>Threads:</td><td><b>$data{perl}{threads}</b></td></tr>\n};
-    print qq{<tr><td>IThreads:</td><td><b>$data{perl}{ithreads}</b></td></tr>\n};
     print qq{<tr><td>Multiplicity:</td><td><b>$data{perl}{multiplicity}</b></td></tr>\n};
     print qq{</table></td></tr>\n\n};
 
