@@ -3126,8 +3126,12 @@ sub html_postgres_bucardo {
                         $i->{dbname};
                     $i->{sourcelimit} and $dbs .= " sourcelimit=$i->{sourcelimit}";
                     $i->{targetlimit} and $dbs .= " targetlimit=$i->{targetlimit}";
-                    $i->{server_side_prepares} ne 't' and $dbs .= ' ssp=FALSE';
-                    $i->{makedelta} eq 'on' and $dbs .= ' makedelta=ON';
+                    if (exists $i->{server_side_prepares} and $i->{server_side_prepares} ne 't') {
+                        $dbs .= ' ssp=FALSE';
+                    }
+                    if (exists $i->{makedelta} and $i->{makedelta} eq 'on') {
+                        $dbs .= ' makedelta=ON';
+                    }
                     $dbs .= '<br />';
                 }
             }
