@@ -15,12 +15,12 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.2';
+our $VERSION = '1.1.3';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
  --verbose
- --skipdbport=#
+ --skippgport=#
  --postgresonly
 Set ENV{PG_CONFIG} if not in the path (or adjust your path!)
 \n";
