@@ -301,6 +301,9 @@ sub gather_dist {
                 $val =~ s/^"(.+)"$/$1/;
                 $data{lsb_release}{$nam} = $val;
             }
+			elsif (/^LSB_VERSION="(\d[\.\d]*)"/) {
+				$data{lsb_version} = $1;
+			}
             else {
                 $quiet or warn qq{Unknown line $. in $lsb1: $_\n};
             }
@@ -401,19 +404,24 @@ sub gather_memory {
             ['Free',   'MemFree'],
             ['Cached', 'Cached'],
             ['Active', 'Active'],
-            ['Inactive', 'Inactive'],
+            ['Inactive', 'Inactive|Inact_clean'],
             ['Swap Total', 'SwapTotal'],
             ['Swap Free', 'SwapFree'],
             );
         for (@memstuff) {
-            my ($name,$label) = @$_;
-            if ($info =~ /$label:\s+(\d+) kB/) {
-                my $val = $1 * 1024;
-                $data{memory}{$name} = $val;
-                $data{memory}{pretty}{$name} = pretty_size($val);
-            }
-            else {
-                $quiet or warn qq{Could not find "$label" in meminfo output\n};
+            my ($name,$olabel) = @$_;
+			my $found = 0;
+			for my $label (split /\s*\|\s*/ => $olabel) {
+				if ($info =~ /$label:\s+(\d+) kB/) {
+					my $val = $1 * 1024;
+					$data{memory}{$name} = $val;
+					$data{memory}{pretty}{$name} = pretty_size($val);
+					$found = 1;
+					last;
+				}
+			}
+            if (!$found) {
+                $quiet or warn qq{Could not determin "$name" from meminfo output\n};
             }
         }
         ## Now shared memory settings
@@ -1214,7 +1222,7 @@ sub gather_postgresinfo {
 
         run_command(qq{psql -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
         my $pinfo = $data{tmp_psql};
-        if ($pinfo =~ /FATAL:  Ident authentication failed for user "postgres"/ and $>==0) {
+        if ($pinfo =~ /FATAL:  Ident authentication failed for user "postgres"/ and 0 == $>) {
             warn "Direct psql call failed, trying su -l postgres\n";
             $opt{use_su_postgres} = 1;
             run_command(qq{psql -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
@@ -1685,7 +1693,7 @@ sub skip_pg_database {
     my $line = (caller)[2];
     warn qq{(Line $line) Connection to port $port, socket $socket failed: $msg\n};
 	warn qq{Perhaps skip this cluster with --skipdbport=$port?\n};
-	exit 1;
+	return 1;
 
 } ## end of skip_pg_database
 
