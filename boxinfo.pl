@@ -800,7 +800,11 @@ sub gather_versions {
       knock konquerer links make mii-tool nano ntpd pdns_server perl pg_config pg_dump
       postgres psql puppet python rrdtool rsync ruby
       screen sed service svn syslog syslog-ng tail_n_mail.plg vi vim yum /) {
-        run_command("$prog --version", 'tmp_version');
+        my $maxtime = $timeout;
+        if ('yum' eq $prog and 30 > $maxtime) {
+            $maxtime = 30;
+        }
+        run_command("$prog --version", 'tmp_version', $maxtime);
         $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## version
