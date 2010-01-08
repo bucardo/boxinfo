@@ -15,7 +15,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.1.1';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -788,7 +788,7 @@ sub gather_versions {
     for my $prog (qw/
       apt-get aptitude autoconf awk bash cc check_postgres.pl chkconfig convert curl cvs dpkg dovecot
       elinks emacs emerge find gcc gdb geos-config git gnome-panel gpg gzip iconv initdb interchange
-      knock konquerer links make mii-tool nano ntpd pdns_server perl pg_config pg_dump php
+      knock konquerer links make mii-tool nano ntpd pdns_server perl pg_config pg_dump
       postgres psql puppet python rrdtool rsync ruby
       screen sed service svn syslog syslog-ng tail_n_mail.plg vi vim yum /) {
         run_command("$prog --version", 'tmp_version');
@@ -805,7 +805,7 @@ sub gather_versions {
         $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## -v
-    for my $prog (qw/ lighttpd rsyslogd slonik /) {
+    for my $prog (qw/ lighttpd php rsyslogd slonik /) {
         run_command("$prog -v", 'tmp_version');
         $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
     }
