@@ -33,12 +33,11 @@ GetOptions(
     \%opt,
     'verbose',
     'quiet',
-    'output',
     'help',
     'format=s',
     'os=s',
     'client=s',
-    'skipdbport=s',
+    'skippgport=s',
     'postgresonly',
     'nopostgres',
     'postgresnohost',
@@ -1687,8 +1686,8 @@ sub skip_pg_database {
     my $port = shift or die;
     my $socket = shift or die;
 
-    if (exists $opt{skipdbport}) {
-        if ($opt{skipdbport} =~ /\b$port\b/) {
+    if (exists $opt{skippgport}) {
+        if ($opt{skippgport} =~ /\b$port\b/) {
             $verbose and warn "Skipping Postgres database port $port\n";
             return 1;
         }
@@ -1696,7 +1695,7 @@ sub skip_pg_database {
 
     my $line = (caller)[2];
     warn qq{(Line $line) Connection to port $port, socket $socket failed: $msg\n};
-    warn qq{Perhaps skip this cluster with --skipdbport=$port?\n};
+    warn qq{Perhaps skip this cluster with --skippgport=$port?\n};
     return 1;
 
 } ## end of skip_pg_database
@@ -2787,7 +2786,7 @@ D zero_damaged_pages              | off
         my $info = $data{postgres}{active_port}{$cluster};
         my $port = $info->{port} || '';
         next if ! defined $info->{setting}{data_directory};
-        next if exists $opt{skipdbport} and $opt{skipdbport} =~ /\b$port\b/;
+        next if exists $opt{skippgport} and $opt{skippgport} =~ /\b$port\b/;
         my $socketdir = $info->{socketdir};
         my $set = $info->{setting};
         my @var;
@@ -2859,7 +2858,7 @@ sub html_postgres_recovery {
         my $c = $data{postgres}{active_port}{$cluster};
         next if ! exists $c->{recfile};
         my $port = $c->{port} || '';
-        next if exists $opt{skipdbport} and $opt{skipdbport} =~ /\b$port\b/;
+        next if exists $opt{skippgport} and $opt{skippgport} =~ /\b$port\b/;
         my $socketdir = $c->{socketdir};
         my $recfile = $c->{recfile};
         $recfile =~ s/ +/ /g;
@@ -2887,7 +2886,7 @@ sub html_postgres_problems {
         my $c = $data{postgres}{active_port}{$cluster};
         next if ! exists $c->{problems};
         my $port = $c->{port} || '';
-        next if exists $opt{skipdbport} and $opt{skipdbport} =~ /\b$port\b/;
+        next if exists $opt{skippgport} and $opt{skippgport} =~ /\b$port\b/;
         my $socketdir = $c->{socketdir};
         for my $db (keys %{$c->{db}}) {
             my $info = $c->{db}{$db};
@@ -2940,7 +2939,7 @@ sub html_postgres_databases {
     C: for my $cluster (sort { $a cmp $b } keys %{$data{postgres}{active_port}}) {
         my $cinfo = $data{postgres}{active_port}{$cluster};
         my $port = $cinfo->{port} || '';
-        next if exists $opt{skipdbport} and $opt{skipdbport} =~ /\b$port\b/;
+        next if exists $opt{skippgport} and $opt{skippgport} =~ /\b$port\b/;
         next if exists $cinfo->{startingup};
         next if ! exists $cinfo->{setting}{data_directory};
         my $socketdir = $cinfo->{socketdir};
