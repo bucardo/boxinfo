@@ -301,9 +301,9 @@ sub gather_dist {
                 $val =~ s/^"(.+)"$/$1/;
                 $data{lsb_release}{$nam} = $val;
             }
-			elsif (/^LSB_VERSION="(\d[\.\d]*)"/) {
-				$data{lsb_version} = $1;
-			}
+            elsif (/^LSB_VERSION="(\d[\.\d]*)"/) {
+                $data{lsb_version} = $1;
+            }
             else {
                 $quiet or warn qq{Unknown line $. in $lsb1: $_\n};
             }
@@ -410,16 +410,16 @@ sub gather_memory {
             );
         for (@memstuff) {
             my ($name,$olabel) = @$_;
-			my $found = 0;
-			for my $label (split /\s*\|\s*/ => $olabel) {
-				if ($info =~ /$label:\s+(\d+) kB/) {
-					my $val = $1 * 1024;
-					$data{memory}{$name} = $val;
-					$data{memory}{pretty}{$name} = pretty_size($val);
-					$found = 1;
-					last;
-				}
-			}
+            my $found = 0;
+            for my $label (split /\s*\|\s*/ => $olabel) {
+                if ($info =~ /$label:\s+(\d+) kB/) {
+                    my $val = $1 * 1024;
+                    $data{memory}{$name} = $val;
+                    $data{memory}{pretty}{$name} = pretty_size($val);
+                    $found = 1;
+                    last;
+                }
+            }
             if (!$found) {
                 $quiet or warn qq{Could not determin "$name" from meminfo output\n};
             }
@@ -1696,8 +1696,8 @@ sub skip_pg_database {
 
     my $line = (caller)[2];
     warn qq{(Line $line) Connection to port $port, socket $socket failed: $msg\n};
-	warn qq{Perhaps skip this cluster with --skipdbport=$port?\n};
-	return 1;
+    warn qq{Perhaps skip this cluster with --skipdbport=$port?\n};
+    return 1;
 
 } ## end of skip_pg_database
 
@@ -1784,9 +1784,9 @@ sub run_command {
     ## Attempt to run a command and gather the input
     ## We store the raw input, and store pretty info in the main hash
 
-	my $command = shift;
-	my $name = shift or die "Need a name!\n";
-	my $specifictimeout = shift || 0;
+    my $command = shift;
+    my $name = shift or die "Need a name!\n";
+    my $specifictimeout = shift || 0;
 
     if ($opt{use_su_postgres} and $command =~ /^psql/) {
         if ($command =~ s{-c "(.+?)"}{}) {
@@ -1806,22 +1806,22 @@ sub run_command {
 
     my $result;
     my $madeit = 0;
-	alarm 0;
-	local $SIG{ALRM} = sub { die 'Timed out' };
-	my $localtimeout = $specifictimeout || $timeout;
+    alarm 0;
+    local $SIG{ALRM} = sub { die 'Timed out' };
+    my $localtimeout = $specifictimeout || $timeout;
     eval {
-		alarm $localtimeout;
+        alarm $localtimeout;
         $result = qx{$command 2>&1};
         $madeit = 1;
     };
-	if ($@) {
-		if ($@ =~ /Timed out/o) {
-			warn "Command timed out at $localtimeout seconds!\n";
-			warn "Command: $command\n";
-			$madeit = 0;
-		}
-	}
-	alarm 0;
+    if ($@) {
+        if ($@ =~ /Timed out/o) {
+            warn "Command timed out at $localtimeout seconds!\n";
+            warn "Command: $command\n";
+            $madeit = 0;
+        }
+    }
+    alarm 0;
     if (!$madeit) {
         $data{$name} = '?';
         $data{failed_command}{$command} = $@;
@@ -2395,6 +2395,14 @@ sub html_perlinfo {
 
     print qq{<tr><th$vtop>${wrap1}Perl info:</th><td><br /><table border="1">\n};
     print qq{<tr><td>Version:</td><td><b>$data{version}{perl}</b></td></tr>\n};
+    ## Only one of these is needed
+    (my $pver = $data{version}{perl}) =~ s/^(\d+\.\d+)\..*/$1/e;
+    if ($pver < 5.10) {
+        print qq{<tr><td>Threads:</td><td><b>$data{perl}{threads}</b></td></tr>\n};
+    }
+    else {
+        print qq{<tr><td>IThreads:</td><td><b>$data{perl}{ithreads}</b></td></tr>\n};
+    }
     print qq{<tr><td>Threads:</td><td><b>$data{perl}{threads}</b></td></tr>\n};
     print qq{<tr><td>IThreads:</td><td><b>$data{perl}{ithreads}</b></td></tr>\n};
     print qq{<tr><td>Multiplicity:</td><td><b>$data{perl}{multiplicity}</b></td></tr>\n};
