@@ -46,6 +46,7 @@ GetOptions(
     'nomysql',
     'nosendmail',
     'useballoons',
+    'timeout=i',
 ) or die $USAGE;
 
 $opt{help} and die $USAGE;
@@ -54,7 +55,7 @@ my $OS           = $opt{os} || $^O;
 my $quiet        = $opt{quiet} || 0;
 my $verbose      = $opt{verbose} || 0;
 my $use_balloons = exists $opt{useballoons} ? $opt{useballoons} : 1;
-
+my $timeout      = exists $opt{timeout} ? $opt{timeout} : 10;
 my $format = $opt{format} || 'wiki';
 
 $opt{use_su_postgres} = 0;
@@ -1213,7 +1214,7 @@ sub gather_postgresinfo {
 
         run_command(qq{psql -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
         my $pinfo = $data{tmp_psql};
-        if ($pinfo =~ /FATAL:  Ident authentication failed for user "postgres"/) {
+        if ($pinfo =~ /FATAL:  Ident authentication failed for user "postgres"/ and $>==0) {
             warn "Direct psql call failed, trying su -l postgres\n";
             $opt{use_su_postgres} = 1;
             run_command(qq{psql -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
@@ -1666,6 +1667,7 @@ sub skip_pg_database {
     ## Pass in the result from run_command
 
     my $msg = shift;
+
     return 0 if $msg !~ /ERROR/ and $msg !~ /FATAL/;
 
     return 1 if $msg =~ /FATAL: SKIP/;
@@ -1681,7 +1683,9 @@ sub skip_pg_database {
     }
 
     my $line = (caller)[2];
-    die qq{(Line $line) Connection to port $port, socket $socket failed: $msg\n};
+    warn qq{(Line $line) Connection to port $port, socket $socket failed: $msg\n};
+	warn qq{Perhaps skip this cluster with --skipdbport=$port?\n};
+	exit 1;
 
 } ## end of skip_pg_database
 
@@ -1768,7 +1772,9 @@ sub run_command {
     ## Attempt to run a command and gather the input
     ## We store the raw input, and store pretty info in the main hash
 
-    my ($command, $name) = @_;
+	my $command = shift;
+	my $name = shift or die "Need a name!\n";
+	my $specifictimeout = shift || 0;
 
     if ($opt{use_su_postgres} and $command =~ /^psql/) {
         if ($command =~ s{-c "(.+?)"}{}) {
@@ -1788,10 +1794,22 @@ sub run_command {
 
     my $result;
     my $madeit = 0;
+	alarm 0;
+	local $SIG{ALRM} = sub { die 'Timed out' };
+	my $localtimeout = $specifictimeout || $timeout;
     eval {
+		alarm $localtimeout;
         $result = qx{$command 2>&1};
         $madeit = 1;
     };
+	if ($@) {
+		if ($@ =~ /Timed out/o) {
+			warn "Command timed out at $localtimeout seconds!\n";
+			warn "Command: $command\n";
+			$madeit = 0;
+		}
+	}
+	alarm 0;
     if (!$madeit) {
         $data{$name} = '?';
         $data{failed_command}{$command} = $@;
