@@ -2131,9 +2131,9 @@ sub html_shared_active {
     return if !exists $data{memory}{active_shared};
 
     print qq{<tr><th$vtop>${wrap1}Active shared mem:</th><td><br /><table border="1">};
-    print qq{<tr><td>Active segments: </td><td style="text-align: right"><b>$data{memory}{active_shared}</b></td></tr>\n};
-    print qq{<tr><td>Active semaphores: </td><td style="text-align: right"><b>$data{memory}{active_semaphores}</b></td></tr>\n};
-    print qq{<tr><td>Active messages: </td><td style="text-align: right"><b>$data{memory}{active_messages}</b></td></tr>\n};
+    print qq{<tr><td>Active segments: </td><td style="text-align: right"><b>$data{memory}{active_shared}</b></td>\n};
+    print qq{<td>Active semaphores: </td><td style="text-align: right"><b>$data{memory}{active_semaphores}</b></td>\n};
+    print qq{<td>Active messages: </td><td style="text-align: right"><b>$data{memory}{active_messages}</b></td></tr>\n};
     print qq{</table></td></tr>\n\n};
 
     return;
@@ -2268,7 +2268,6 @@ sub html_fs {
         print qq{<td>$d->{type} ($options)</td></tr>\n};
     }
 
-    ## Only seen on EC2
     if (exists $data{mdstat}) {
         $data{mdstat} =~ s/[<]/&lt;/g;
         $data{mdstat} =~ s/[>]/&gt;/g;
