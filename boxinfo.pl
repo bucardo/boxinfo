@@ -15,7 +15,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.4';
+our $VERSION = '1.1.5';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -2213,7 +2213,7 @@ sub html_interfaces {
                         exists $d->{RUNNING} ? 'Active' : 'Inactive';
         printf '<td>%s',
             exists $d->{current_speed} ? "$d->{current_speed} $d->{duplex}" : exists $d->{RUNNING} ?
-                $int =~ /^lo|tun/ ? 'N/A' : $UNKNOWN_VALUE : 'N/A';
+                $int =~ /^lo|tun|bond/ ? 'N/A' : $UNKNOWN_VALUE : 'N/A';
         if (exists $d->{nowspeed} and exists $d->{maxspeed} and $d->{maxspeed} and ($d->{nowspeed} < $d->{maxspeed})) {
             print " <b>(but max is $d->{maxspeed})</b>";
         }
