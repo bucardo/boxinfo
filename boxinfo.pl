@@ -31,6 +31,7 @@ my $UNKNOWN_VERSION = '?';
 my %opt;
 GetOptions(
     \%opt,
+    'version',
     'verbose',
     'quiet',
     'help',
@@ -49,6 +50,11 @@ GetOptions(
 ) or die $USAGE;
 
 $opt{help} and die $USAGE;
+
+if ($opt{version}) {
+    print "$0 version $VERSION\n";
+    exit 0;
+}
 
 my $OS           = $opt{os} || $^O;
 my $quiet        = $opt{quiet} || 0;
