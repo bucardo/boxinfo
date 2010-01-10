@@ -1,4 +1,4 @@
-#!perl
+#!/usr/bin/perl
 
 ## Gather important information about a box
 ## Output in a MediaWiki friendly format
@@ -1182,6 +1182,7 @@ sub gather_postgresinfo {
 
   PG: while ($info =~ /^(.+?)((\S+)\.s\.PGSQL\.(\d+))$/mg) {
         my ($extra,$cluster,$dir,$port) = ($1,$2,$3,$4);
+        next if exists $data{postgres}{active_port}{$cluster};
         $data{postgres}{active_port}{$cluster} = { socketdir => $dir, port => $port, extra => $extra };
         my $c = $data{postgres}{active_port}{$cluster};
         my $pid = ($extra =~ /(\d+)\D+$/) ? $1 : '';
