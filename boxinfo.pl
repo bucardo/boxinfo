@@ -1228,14 +1228,14 @@ sub gather_postgresinfo {
 
         ## Let's connect and get some information
         my $usedir = $opt{postgresnohost} ? '' : "-h $dir";
-        my $PSQL = qq{psql -Ax -qt $usedir -p $port};
+        my $PSQL = qq{psql -X -Ax -qt $usedir -p $port};
 
-        run_command(qq{psql -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
+        run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
         my $pinfo = $data{tmp_psql};
         if ($pinfo =~ /FATAL:  Ident authentication failed for user "postgres"/ and 0 == $>) {
             warn "Direct psql call failed, trying su -l postgres\n";
             $opt{use_su_postgres} = 1;
-            run_command(qq{psql -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
+            run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
         }
         if ($pinfo =~ /FATAL:  role.+does not exist/ and exists $c->{user}) {
@@ -1243,12 +1243,12 @@ sub gather_postgresinfo {
             $ENV{PGUSER} = $c->{user};
             $ENV{PGDATABASE} = 'postgres';
             $opt{use_pg_user} = $c->{user};
-            run_command(qq{psql -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
+            run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
         }
         if ($pinfo =~ /ERROR.+shobj_description/) {
             ## Mismatched psql version, but non-plussed should work
-            run_command(qq{psql -x -t $usedir -p $port -c "\\l"}, 'tmp_psql');
+            run_command(qq{psql -X -x -t $usedir -p $port -c "\\l"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
         }
 
@@ -1257,7 +1257,7 @@ sub gather_postgresinfo {
         if ($pinfo =~ /$startupstring/) {
             warn "DB may be starting up, sleeping for a retry..\n";
             sleep 2;
-            run_command(qq{psql -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
+            run_command(qq{psql -X x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
             if ($pinfo =~ /$startupstring/) {
                 $c->{startingup} = 1;
@@ -1347,7 +1347,7 @@ sub gather_postgresinfo {
                 my $sdir = "$newsock.s.PGSQL.$port";
                 if (-S $sdir) {
                     $dir = $c->{largesocketdir} = $newsock;
-                    run_command(qq{psql -x -t -A $usedir -p $port -c "\\l+"}, 'tmp_psql');
+                    run_command(qq{psql -X -x -t -A $usedir -p $port -c "\\l+"}, 'tmp_psql');
                     $pinfo = $data{tmp_psql};
                     if ($pinfo !~ /\|/) {
                         ## Try as the user that owns the database
@@ -1358,7 +1358,7 @@ sub gather_postgresinfo {
                             $ENV{PGUSER} = $1;
                             $ENV{PGDATABASE} = 'postgres';
                         }
-                        run_command(qq{psql -x -t -A $usedir -p $port -c "\\l+"}, 'tmp_psql');
+                        run_command(qq{psql -X -x -t -A $usedir -p $port -c "\\l+"}, 'tmp_psql');
                         $pinfo = $data{tmp_psql};
                     }
                 }
@@ -1392,7 +1392,7 @@ sub gather_postgresinfo {
         }
 
         my $SQL = 'SELECT datname,datistemplate,datallowconn,datconnlimit,age(datfrozenxid),datacl,pg_database_size(oid) FROM pg_database';
-        run_command(qq{psql -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
+        run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
         $pinfo = $data{tmp_psql};
         die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
 
@@ -1410,7 +1410,7 @@ sub gather_postgresinfo {
 
         ## Tablespace info
         $SQL = 'SELECT spcname, spcowner, spclocation, spcacl FROM pg_tablespace';
-        run_command(qq{psql -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
+        run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
         $pinfo = $data{tmp_psql};
         for my $db (split /\n/ => $pinfo) {
             my ($name,$owner,$location,$acl) = split /\|/ => $db;
@@ -1420,7 +1420,7 @@ sub gather_postgresinfo {
         }
 
         $SQL = 'SELECT version()';
-        run_command(qq{psql -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
+        run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
         $pinfo = $data{tmp_psql};
         die $pinfo if $pinfo !~ /PostgreSQL (\S+)/;
         my $ver = $1;
@@ -1436,7 +1436,7 @@ sub gather_postgresinfo {
         if ($ver < 8.2) {
             $SQL =~ s/unit/'?' AS unit/;
         }
-        run_command(qq{psql -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
+        run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
         $pinfo = $data{tmp_psql};
         die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
         for my $line (split /\n/ => $pinfo) {
@@ -1459,7 +1459,7 @@ sub gather_postgresinfo {
             next if $info->{canconn} eq 'No';
             $SQL = 'SELECT relkind, count(*) FROM pg_class c JOIN pg_namespace n ON (n.oid = c.relnamespace) '.
                 q{WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' GROUP BY 1};
-            run_command(qq{psql -t -A $usedir -p $port --dbname "$qdb" -c "$SQL"}, 'tmp_psql');
+            run_command(qq{psql -X -t -A $usedir -p $port --dbname "$qdb" -c "$SQL"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
             die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
             for my $line (split /\n/ => $pinfo) {
@@ -1472,7 +1472,7 @@ sub gather_postgresinfo {
                 . q{JOIN pg_class c ON (c.oid = a.attrelid AND c.relname = 'sl_log_1') }
                 . q{JOIN pg_namespace n ON (n.oid = c.relnamespace) }
                 . q{WHERE attname = 'log_xid'};
-            run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
+            run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
             $pinfo = $data{tmp_slony};
             if ($pinfo =~ /\w/) {
                 my $slonyschema = $info->{slony}{schema} = $pinfo;
@@ -1480,21 +1480,21 @@ sub gather_postgresinfo {
                 $c->{gotslony}++;
 
                 $SQL = "SELECT pa_server || '-' || pa_client, pa_conninfo FROM $slonyschema.sl_path ORDER BY pa_server, pa_client";
-                run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
+                run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
                 $pinfo = $data{tmp_slony};
                 for my $line (split /\n/ => $pinfo) {
                     push @{$info->{slony}{paths}}, $line;
                 }
 
                 $SQL = "SELECT tab_nspname || '.' || tab_relname FROM $slonyschema.sl_table ORDER BY tab_id";
-                run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
+                run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
                 $pinfo = $data{tmp_slony};
                 for my $line (split /\n/ => $pinfo) {
                     push @{$info->{slony}{tables}}, $line;
                 }
 
                 $SQL = "SELECT seq_nspname || '.' || seq_relname FROM $slonyschema.sl_sequence ORDER BY seq_id";
-                run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
+                run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
                 $pinfo = $data{tmp_slony};
                 for my $line (split /\n/ => $pinfo) {
                     push @{$info->{slony}{sequences}}, $line;
@@ -1522,7 +1522,7 @@ sub gather_postgresinfo {
                     $info->{bucardo}{$tablename} ||= {};
                     $SQL = qq{SELECT * FROM bucardo.$tablename};
                     slurp_table_info({
-                        command      => qq{psql -x -t $usedir -p $port -c "$SQL" --dbname "$qdb"},
+                        command      => qq{psql -X -x -t $usedir -p $port -c "$SQL" --dbname "$qdb"},
                         var          => $info->{bucardo}{$tablename},
                         pk           => $bucardo_table{$tablename},
                         failregex    => "bucardo.$tablename",
@@ -1540,7 +1540,7 @@ sub gather_postgresinfo {
             my $info = $c->{db}{$db};
             next if $info->{canconn} eq 'No';
             my $qdb = $info->{quoted_db_name};
-            run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
+            run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
             die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
             for my $line (split /\n/ => $pinfo) {
@@ -1556,7 +1556,7 @@ sub gather_postgresinfo {
             my $info = $c->{db}{$db};
             next if $info->{canconn} eq 'No';
             my $qdb = $info->{quoted_db_name};
-            run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
+            run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
             die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
             for my $line (split /\n/ => $pinfo) {
@@ -1571,7 +1571,7 @@ sub gather_postgresinfo {
             my $info = $c->{db}{$db};
             next if $info->{canconn} eq 'No';
             my $qdb = $info->{quoted_db_name};
-            run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
+            run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
             die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
             for my $line (split /\n/ => $pinfo) {
@@ -1588,7 +1588,7 @@ sub gather_postgresinfo {
             next if $info->{canconn} eq 'No';
             my $qdb = $info->{quoted_db_name};
             $SQL = $ver >= 8.3 ? $SQL83 : $SQL82;
-            run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
+            run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
             die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
             for my $line (split /\n/ => $pinfo) {
@@ -1611,7 +1611,7 @@ sub gather_postgresinfo {
             ## PostGIS
             for my $name (qw/postgis_full_version postgis_lib_build_date postgis_scripts_build_date/) {
                 $SQL = "SELECT $name()";
-                run_command(qq{psql -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
+                run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
                 $pinfo = $data{tmp_psql};
                 if ($pinfo !~ /ERROR/) {
                     $info->{postgis}{$name} = $data{tmp_psql};
