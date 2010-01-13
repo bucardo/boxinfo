@@ -15,7 +15,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.5';
+our $VERSION = '1.1.6';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -2265,6 +2265,7 @@ sub html_fs {
         next if ! defined $d->{mounted};
         next if $fs eq 'none';
         (my $ffs = $fs) =~ s{(.+/)([\w\-]{20,})$}{$1<br />$2};
+        $ffs =~ s{^([^:]{15,}:)(.+)}{$1<br />$2};
         print qq{<tr><td>$ffs</td><td><b>$d->{mounted}</b></td><td>$d->{size}/$d->{capacity}</td>};
         print qq{<td>$d->{inodes_usage}</td>\n};
         my $options = $d->{options};
