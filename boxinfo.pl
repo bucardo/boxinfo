@@ -447,7 +447,7 @@ sub gather_memory {
 
         run_command('ipcs -q', 'tmp_active_message_queues');
         $data{memory}{active_messages} = ($data{tmp_active_message_queues} =~ y/\n/\n/) - 3;
-        $data{memory}{active_messages} = 0 if $data{tmp_active_shared_message_queues} !~ /\d/;
+        $data{memory}{active_messages} = 0 if $data{tmp_active_message_queues} !~ /\d/;
 
         run_command('ipcs -u', 'tmp_ipcs_summary');
         ## Future: parse the above
