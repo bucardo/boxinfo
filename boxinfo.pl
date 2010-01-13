@@ -1132,8 +1132,8 @@ sub gather_heartbeat {
 
     run_command('cl_status hbstatus', 'tmp_heartbeat');
     my $info = $data{tmp_heartbeat};
-    if ($info =~ /Heartbeat is running/) {
-        $data{heartbeat}{active} = 1;
+    if ($info =~ /Heartbeat is/) {
+        $data{heartbeat}{active} = $info;
     }
 
     run_command('cl_status listnodes', 'tmp_heartbeat');
@@ -1152,6 +1152,26 @@ sub gather_heartbeat {
                 last;
             }
         }
+    }
+
+    my $dir = '/etc/ha.d/resource.d';
+    if (-d $dir) {
+    my $dh;
+    if (opendir my $dh, $dir) {
+      my @rlist = grep { -f "$dir/$_" } readdir $dh;
+      closedir $dh;
+          $data{heartbeat}{resources} = \@rlist;
+        }
+    }
+
+    my $file = '/etc/ha.d/haresources';
+    if (-e $file) {
+      run_command("cat $file", 'tmp_heartbeat');
+      my $info = $data{tmp_heartbeat};
+      if ($info =~ /\w/) {
+    chomp $info;
+    $data{heartbeat}{haresources} = $info;
+      }
     }
 
     return;
@@ -2172,7 +2192,12 @@ sub html_heartbeat {
     print qq{<tr><th$vtop>${wrap1}Linux HA:</th><td><br /><table border="1">\n};
 
     if (exists $data{heartbeat}{active}) {
-        print qq{<tr><td>Hearbeat:</td><th>Active</th></tr>\n};
+        print qq{<tr><th colspan="2">$data{heartbeat}{active}</tr>\n};
+    }
+
+    if (exists $data{heartbeat}{haresources}) {
+    my $har = escape_html($data{heartbeat}{haresources});
+        print qq{<tr><td>haresources:</td><td>$har</td></tr>\n};
     }
 
     if (exists $data{heartbeat}{node}) {
@@ -2185,6 +2210,11 @@ sub html_heartbeat {
         my $config = $data{heartbeat}{config};
         $config =~ s/\s*$//gm;
         print qq{<tr><td>Config:</td><td><pre>$config</pre></td></tr>\n};
+    }
+
+    if (exists $data{heartbeat}{resources}) {
+        my $reslist = join '<br />' => sort @{$data{heartbeat}{resources}};
+        print qq{<tr><td>Resources:</td><td>$reslist</td></tr>\n};
     }
 
     print qq{</table></td></tr>\n\n};
@@ -2276,10 +2306,8 @@ sub html_fs {
     }
 
     if (exists $data{mdstat}) {
-        $data{mdstat} =~ s/[<]/&lt;/g;
-        $data{mdstat} =~ s/[>]/&gt;/g;
-        $data{mdstat} =~ s/\n/\<br \>/g;
-        print qq{<tr><td>mdstat:</td><td colspan='4'>$data{mdstat}</td></tr>};
+        printf q{<tr><td>mdstat:</td><td colspan='4'>%s</td></tr>},
+            escape_html($data{mdstat});
     }
     print "</table></td></tr>\n\n";
 
@@ -2321,12 +2349,10 @@ sub html_disk_settings {
         print qq{<td>$d->{scheduler}</td>\n};
         print qq{<td>$d->{type} ($d->{options})</td></tr>\n};
     }
-    ## Have only seen this on an EC2 system, may need to revisit
+
     if (exists $data{mdstat}) {
-        $data{mdstat} =~ s/[<]/&lt;/g;
-        $data{mdstat} =~ s/[>]/&gt;/g;
-        $data{mdstat} =~ s/\n/\<br \\\>/g;
-        print qq{<tr><td>mdstat:</td><td colspan=5>$data{mdstat}</td></tr>};
+        print q{<tr><td>mdstat:</td><td colspan=5>%s</td></tr>},
+            escape_html($data{mdstat});
     }
     print "</table></td></tr>\n\n";
 
@@ -3350,3 +3376,18 @@ sub html_aptitude {
     return;
 
 } ## end of html_aptitude
+
+
+sub escape_html {
+
+  my $string = shift;
+
+  $string =~ s{<}{&lt;}g;
+  $string =~ s{>}{&gt;}g;
+  $string =~ s{\n}{<br />}g;
+
+  return $string;
+
+} ## end of escape_html
+
+
