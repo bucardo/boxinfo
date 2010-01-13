@@ -277,7 +277,7 @@ sub gather_uname {
         run_command('uname --processor' => 'Processor');
         run_command('uname --hardware-platform' => 'Hardware platform');
     }
-    elsif ($OS =~ /bsd/) {
+    elsif ($OS =~ /bsd/ or $OS =~ /darwin/) {
         run_command('uname -s' => 'Kernel name');
         run_command('uname -n' => 'Node name');
         run_command('uname -r' => 'Kernel release');
@@ -367,7 +367,7 @@ sub gather_vminfo {
         }
     }
 
-    if ($OS =~ /bsd/) {
+    if ($OS =~ /bsd/ or $OS =~ /darwin/) {
         run_command('ps -o stat', 'tmp_ps');
         if ($data{tmp_ps} =~ /J$/m) {
             $data{VM} = 'BSD jail';
@@ -439,10 +439,16 @@ sub gather_memory {
         }
         run_command('ipcs -m', 'tmp_active_shared_memory');
         $data{memory}{active_shared} = ($data{tmp_active_shared_memory} =~ y/\n/\n/) - 3;
+        $data{memory}{active_shared} = 0 if $data{tmp_active_shared_memory} !~ /\d/;
+
         run_command('ipcs -s', 'tmp_active_semaphores');
         $data{memory}{active_semaphores} = ($data{tmp_active_semaphores} =~ y/\n/\n/) - 3;
+        $data{memory}{active_semaphores} = 0 if $data{tmp_active_semaphores} !~ /\d/;
+
         run_command('ipcs -q', 'tmp_active_message_queues');
         $data{memory}{active_messages} = ($data{tmp_active_message_queues} =~ y/\n/\n/) - 3;
+        $data{memory}{active_messages} = 0 if $data{tmp_active_shared_message_queues} !~ /\d/;
+
         run_command('ipcs -u', 'tmp_ipcs_summary');
         ## Future: parse the above
 
@@ -453,7 +459,7 @@ sub gather_memory {
         }
 
     }
-    elsif ($OS =~ /bsd/) {
+    elsif ($OS =~ /bsd/ or $OS =~ /darwin/) {
         exists $data{'tmp_sysctl'} or run_command('sysctl -a', 'tmp_sysctl');
         my $info = $data{'tmp_sysctl'};
 
@@ -465,22 +471,30 @@ sub gather_memory {
             );
         for (@memstuff) {
             my ($name,$label) = @$_;
-            if ($info =~ /$label:\s+(\d+)/) {
+            if ($info =~ /$label\s*[=:]\s*(\d+)/) {
                 my $val = $1;
                 $data{memory}{$name} = $val;
                 $data{memory}{pretty}{$name} = pretty_size($val);
             }
-            else {
-                $quiet or warn qq{Could not find "$label" in sysctl output\n};
+            elsif (!$quiet) {
+                if ($OS !~ /darwin/ or $label !~ /realmem|kmem/) {
+                    warn qq{Could not find "$label" in sysctl output\n};
+                }
             }
         }
         run_command('ipcs -m', 'tmp_active_shared_memory');
         $data{memory}{active_shared} = ($data{tmp_active_shared_memory} =~ y/\n/\n/) - 3;
+        $data{memory}{active_shared} = 0 if $data{tmp_active_shared_memory} !~ /\d/;
+
         run_command('ipcs -s', 'tmp_active_semaphores');
         $data{memory}{active_semaphores} = ($data{tmp_active_semaphores} =~ y/\n/\n/) - 3;
+        $data{memory}{active_semaphores} = 0 if $data{tmp_active_semaphores} !~ /\d/;
+
         run_command('ipcs -q', 'tmp_active_message_queues');
         $data{memory}{active_message} = ($data{tmp_active_message_queues} =~ y/\n/\n/) - 3;
-        $data{memory}{active_messages} = 0 if ! defined $data{memory}{active_messages};
+        $data{memory}{active_messages} = 0 if
+            (! defined $data{memory}{active_messages} or $data{tmp_active_message_queues} !~ /\d/);
+
         run_command('ipcs -a', 'tmp_ipcs_all');
         run_command('ipcs -T', 'tmp_ipcs_T');
     }
@@ -515,7 +529,7 @@ sub gather_croninfo {
             }
         }
     }
-    elsif ($OS =~ /bsd/) {
+    elsif ($OS =~ /bsd/ or $OS =~ /darwin/) {
         run_command('cat /etc/crontab', 'tmp_crontab');
         my $info = $data{tmp_crontab};
     }
@@ -566,12 +580,12 @@ sub gather_mounts {
             }
         }
     }
-    elsif ($OS =~ /bsd/) {
+    elsif ($OS =~ /bsd/ or $OS =~ /darwin/) {
         run_command('mount -d -v', 'tmp_mount');
         for my $line (split /\n/ => $data{tmp_mount}) {
             ## Example: /dev/foo on / (ufs, local)
-            if ($line =~ m{^(.+?) on (.+?) \((.+?)\)}) {
-                my ($dev,$dir,$type,$options,$label) = ($1,$2,$3,'','');
+            if ($line =~ m{^(.+?) on (.+?)(?: \((.+?)\))*}) {
+                my ($dev,$dir,$type,$options,$label) = ($1,$2,$3||'','','');
                 my @options;
                 ($type, @options) = split /, /, $type;
                 $options = join ', ', @options;
@@ -596,43 +610,47 @@ sub gather_mounts {
 
 sub gather_disksize {
 
-    if ($OS eq 'linux' or $OS =~ /bsd/) {
+    if ($OS eq 'linux' or $OS =~ /bsd/ or $OS =~ /darwin/) {
         run_command('df -h -P', 'tmp_disk_space');
         run_command('df -i -P', 'tmp_disk_space_inodes');
         my $info = $data{tmp_disk_space};
         for my $line (split /\n/ => $info) {
             next if $line =~ /^Filesystem/;
+            next unless $line =~ s{^(.+?)\s+(\d)}{$2};
+            my $name = $1;
             my @info = split /\s+/ => $line;
             if ($OS eq 'linux') {
-                $data{fs}{$info[0]}{size} = $info[1];
-                $data{fs}{$info[0]}{used} = $info[2];
-                $data{fs}{$info[0]}{available} = $info[3];
-                $data{fs}{$info[0]}{capacity} = $info[4];
-                $data{fs}{$info[0]}{mounted} = $info[5];
+                $data{fs}{$name}{size} = $info[0];
+                $data{fs}{$name}{used} = $info[1];
+                $data{fs}{$name}{available} = $info[2];
+                $data{fs}{$name}{capacity} = $info[3];
+                $data{fs}{$name}{mounted} = $info[4];
             }
             else { ## BSD ... is not dead
-                $data{fs}{$info[0]}{size} = $info[2] + $info[3];
-                $data{fs}{$info[0]}{used} = $info[2];
-                $data{fs}{$info[0]}{available} = $info[3];
-                $data{fs}{$info[0]}{capacity} = $info[4];
-                $data{fs}{$info[0]}{mounted} = $info[5];
+                $data{fs}{$name}{size} = $info[1] + $info[2];
+                $data{fs}{$name}{used} = $info[1];
+                $data{fs}{$name}{available} = $info[2];
+                $data{fs}{$name}{capacity} = $info[3];
+                $data{fs}{$name}{mounted} = $info[4];
             }
         }
         $info = $data{tmp_disk_space_inodes};
         for my $line (split /\n/ => $info) {
             next if $line =~ /^Filesystem/;
+            next unless $line =~ s{^(.+?)\s+(\d)}{$2};
+            my $name = $1;
             my @info = split /\s+/ => $line;
             if ($OS eq 'linux') {
-                $data{fs}{$info[0]}{inodes} = $info[1];
-                $data{fs}{$info[0]}{inodes_used} = $info[2];
-                $data{fs}{$info[0]}{inodes_free} = $info[3];
-                $data{fs}{$info[0]}{inodes_usage} = $info[4];
+                $data{fs}{$name}{inodes} = $info[0];
+                $data{fs}{$name}{inodes_used} = $info[1];
+                $data{fs}{$name}{inodes_free} = $info[2];
+                $data{fs}{$name}{inodes_usage} = $info[3];
             }
             else { ##BSD
-                $data{fs}{$info[0]}{inodes} = $info[5] + $info[6];
-                $data{fs}{$info[0]}{inodes_used} = $info[5];
-                $data{fs}{$info[0]}{inodes_free} = $info[6];
-                $data{fs}{$info[0]}{inodes_usage} = $info[7];
+                $data{fs}{$name}{inodes} = $info[4] + $info[5];
+                $data{fs}{$name}{inodes_used} = $info[4];
+                $data{fs}{$name}{inodes_free} = $info[5];
+                $data{fs}{$name}{inodes_usage} = $info[6];
             }
         }
     }
@@ -784,7 +802,7 @@ sub gather_routes {
             }
         }
     }
-    elsif ($OS =~ /bsd/) {
+    elsif ($OS =~ /bsd/ or $OS =~ /darwin/) {
         run_command('netstat -r', 'tmp_route');
     }
     else {
@@ -949,10 +967,10 @@ sub gather_cpuinfo {
             }
         }
     }
-    elsif ($OS =~ /bsd/) {
+    elsif ($OS =~ /bsd/ or $OS =~ /darwin/) {
         exists $data{'tmp_sysctl'} or run_command('sysctl -a', 'tmp_sysctl');
         my $info = $data{'tmp_sysctl'};
-        if ($info =~ /hw.model:\s+(.+)/) {
+        if ($info =~ /hw.model:\s+(.+)/ or $info =~ /machdep.cpu.brand_string:\s+(.+)/) {
             $data{cpu}{model} = $1;
             if ($1 =~ / (.+GHz)/) {
                 $data{cpu}{speed} = $1;
@@ -2294,15 +2312,18 @@ sub html_fs {
         my $d = $data{fs}{$fs};
         next if ! defined $d->{mounted};
         next if $fs eq 'none';
-        (my $ffs = $fs) =~ s{(.+/)([\w\-]{20,})$}{$1<br />$2};
+        (my $ffs = escape_html($fs)) =~ s{(.+/)([\w\-]{20,})$}{$1<br />$2};
         $ffs =~ s{^([^:]{15,}:)(.+)}{$1<br />$2};
         print qq{<tr><td>$ffs</td><td><b>$d->{mounted}</b></td><td>$d->{size}/$d->{capacity}</td>};
         print qq{<td>$d->{inodes_usage}</td>\n};
+        $d->{options} = '' if ! exists $d->{options};
         my $options = $d->{options};
         if (length $options > 20) {
             $options =~ s{,}{,<br />}g;
         }
-        print qq{<td>$d->{type} ($options)</td></tr>\n};
+        printf qq{<td>%s%s</td></tr>\n},
+            defined $d->{type} ? $d->{type} : '?',
+            $d->{options} ? " ($d->{options})" : '';
     }
 
     if (exists $data{mdstat}) {
