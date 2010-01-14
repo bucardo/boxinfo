@@ -1702,8 +1702,8 @@ sub gather_mysqlinfo {
     my $info = $data{tmp_mysqlshow};
 
     for my $line (split /\n/ => $info) {
-    next unless $line =~ m{^\| (.+)\s+\|\s+(\d+) \|$};
-    $data{mysql}{database}{$1} = {tables => $2};
+        next unless $line =~ m{^\| (.+)\s+\|\s+(\d+) \|$};
+        $data{mysql}{database}{$1} = {tables => $2};
     }
 
     run_command(q{mysql_config --port}, 'tmp_mysqlport');
@@ -1711,6 +1711,11 @@ sub gather_mysqlinfo {
 
     run_command(q{mysql_config --socket}, 'tmp_mysqlsocket');
     $data{mysql}{socket} = $data{tmp_mysqlsocket} || '?';
+
+    run_command(q{mysqladmin status}, 'tmp_mysqladmin');
+    if ($data{tmp_mysqladmin} =~ /Uptime/) {
+        @{$data{mysql}{status}} = split /  / => $data{tmp_mysqladmin};
+    }
 
     return;
 
@@ -2323,7 +2328,7 @@ sub html_fs {
         }
         printf qq{<td>%s%s</td></tr>\n},
             defined $d->{type} ? $d->{type} : '?',
-            $d->{options} ? " ($d->{options})" : '';
+            $options ? " ($options)" : '';
     }
 
     if (exists $data{mdstat}) {
@@ -3283,8 +3288,13 @@ sub html_mysql {
     print qq{<tr><td>Version:</td><td><b>$data{version}{mysql}</b></td></tr>\n};
     print qq{<tr><td>Port:</td><td><b>$data{mysql}{port}</b></td></tr>\n};
     print qq{<tr><td>Socket:</td><td><b>$data{mysql}{socket}</b></td></tr>\n};
+    if ($data{mysql}{status}) {
+        my $stat = join '<br />' => @{$data{mysql}{status}};
+        print qq{<tr><td>Status:</td><td><pre>$stat</pre></td></tr>\n};
+    }
 
-    my $dbs = join '<br />' => map { "<b>$_</b> ($data{mysql}{database}{$_}{tables} tables)" } sort keys %{$data{mysql}{database}};
+    my $dbs = join '<br />' => map { "<b>$_</b> ($data{mysql}{database}{$_}{tables} tables)" }
+        sort keys %{$data{mysql}{database}};
 
     print qq{<tr><td>Databases:</td><td>$dbs</td></tr>\n};
 
