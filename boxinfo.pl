@@ -2867,6 +2867,8 @@ D zero_damaged_pages              | off
             next if $source eq 'Def' and $value eq 'unset'; ## old style
             if ($set->{$var}{source} ne 'default') {
                 my $def = $pgs{$var}->{value};
+				$def =~ s/\n/ /g;
+				$def = '(empty string)' if $def =~ /^\s*$/;
                 if ($use_balloons) {
                     $source = "<balloon title='Default is: $def'>$source</balloon>";
                 }
