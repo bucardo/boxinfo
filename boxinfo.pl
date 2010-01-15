@@ -15,7 +15,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.6';
+our $VERSION = '1.1.7';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -2867,8 +2867,8 @@ D zero_damaged_pages              | off
             next if $source eq 'Def' and $value eq 'unset'; ## old style
             if ($set->{$var}{source} ne 'default') {
                 my $def = $pgs{$var}->{value};
-				$def =~ s/\n/ /g;
-				$def = '(empty string)' if $def =~ /^\s*$/;
+                $def =~ s/\n/ /g;
+                $def = '(empty string)' if $def =~ /^\s*$/;
                 if ($use_balloons) {
                     $source = "<balloon title='Default is: $def'>$source</balloon>";
                 }
