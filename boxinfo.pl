@@ -441,10 +441,12 @@ sub gather_memory {
         run_command('ipcs -u', 'tmp_ipcs_summary');
         ## Future: parse the above
 
-        ## Swapiness
-        run_command('cat /proc/sys/vm/swappiness', 'tmp_swap');
-        if ($data{'tmp_swap'} =~ /\d/) {
-            $data{vm}{swappiness} = $data{'tmp_swap'};
+        ## Major VM tunables
+        for my $vm (qw/swappiness dirty_ratio dirty_background_ratio/) {
+            run_command("cat /proc/sys/vm/$vm", 'tmp_swap');
+            if ($data{'tmp_swap'} =~ /\d/) {
+                $data{vm}{$vm} = $data{'tmp_swap'};
+            }
         }
 
     }
@@ -2113,9 +2115,13 @@ sub html_shared_memory {
     print qq{<tr><td>shmmax: </td><td style="text-align: right"><b>$data{memory}{pretty}{shmmax}</b></td></tr>\n};
     print qq{<tr><td>shmmni: </td><td style="text-align: right"><b>$data{memory}{shmmni}</b></td></tr>\n};
     print qq{<tr><td>shmall: </td><td style="text-align: right"><b>$data{memory}{pretty}{shmall}</b></td></tr>\n};
-    if (exists $data{vm}{swappiness}) {
-        print qq{<tr><td>swappiness: </td><td style="text-align: right"><b>$data{vm}{swappiness}</b></td></tr>\n};
+
+    for my $vm ('swappiness','dirty_ratio','dirty_background_ratio') {
+        if (exists $data{vm}{$vm}) {
+            print qq{<tr><td>$vm: </td><td style="text-align: right"><b>$data{vm}{$vm}</b></td></tr>\n};
+        }
     }
+
     for my $m ('Free', 'Cached', 'Active', 'Swap Total') {
         print qq{<tr><td>$m: </td><td style="text-align: right"><b>$data{memory}{pretty}{$m}</b></td></tr>\n};
     }
