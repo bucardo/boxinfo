@@ -3207,7 +3207,7 @@ sub html_postgres_bucardo {
             if (keys %{$bc->{goat}}) {
                 $tables = join '<br />',
                     sort
-                    map { "$bc->{goat}{$_}{schemaname}.$bc->{goat}{$_}{tablename}" }
+                    map { "$db $bc->{goat}{$_}{schemaname}.$bc->{goat}{$_}{tablename}" }
                     grep { $bc->{goat}{$_}{reltype} eq 'table' }
                     keys %{$bc->{goat}};
             }
