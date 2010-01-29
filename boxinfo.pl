@@ -24,7 +24,11 @@ my $USAGE = "Usage: $0 <options>
  --skippgport=#
  --postgresonly
 Set ENV{PG_CONFIG} if not in the path (or adjust your path!)
-\n";
+
+For complete help, please visit:
+http://bucardo.org/wiki/Boxinfo
+
+";
 
 my $UNKNOWN_VALUE = '?';
 my $UNKNOWN_VERSION = '?';
