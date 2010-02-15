@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.9';
+our $VERSION = '1.1.10';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -2615,6 +2615,9 @@ sub html_postgres_active {
         my $port = $c->{port};
         my $dir = $c->{largesocketdir} || $c->{socketdir};
         my $ver = $c->{setting}{server_version}{value} || $c->{version}{full} || '?';
+        if ($ver =~ /^\d+\.\d+$/ and exists $data{version}{psql}) {
+            $ver .= "<br />(probably $data{version}{psql})";
+        }
         print qq{<tr><td><b>$port</b></td><td><b>$dir</b></td><td><b>$ver</b></td>};
         if ($extrasym) {
             my $info = '&nbsp;';
