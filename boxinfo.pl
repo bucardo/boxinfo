@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.8';
+our $VERSION = '1.1.9';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -369,6 +369,28 @@ sub gather_vminfo {
         run_command($file, 'tmp_ec2');
         if ($data{tmp_ec2} =~ /\d/) {
             $data{EC2}{ami} = $data{tmp_ec2};
+        }
+
+        ## Grab the rest of the EC2 information on the fly
+        if (exists $data{version}{curl}) {
+            my %meta;
+            my $uri = 'http://169.254.169.254/latest/meta-data/';
+            parse_ec2_uri(\%meta, $uri);
+            sub parse_ec2_uri {
+                my ($tempname, $tempurl) = @_;
+                my $info = qx{curl -s $tempurl};
+                for my $word (split /\n/ => $info) {
+                    if ($word =~ m{/$}) {
+                        $tempname->{$word} = {};
+                        parse_ec2_uri($tempname->{$word}, "${tempurl}$word");
+                    }
+                    elsif ($word =~ /\w$/) {
+                        my $uri = "${tempurl}$word";
+                        $tempname->{$word} = qx{curl -s $uri};
+                    }
+                }
+            }
+            $data{EC2}{meta} = \%meta;
         }
     }
 
@@ -2069,8 +2091,25 @@ sub html_ec2 {
 
     print qq{<tr><th$vtop>${wrap1}EC2:</th><td><br /><table border="1" style="border: black solid 1px">};
     for my $name (sort keys %{$data{EC2}}) {
+        next if $name eq 'meta';
         print qq{<tr><td>$name: </td><td><b>$data{EC2}{$name}</b></td></tr>\n};
     }
+    if (exists $data{EC2}{meta}) {
+        for my $name (sort keys %{$data{EC2}{meta}}) {
+            my $value = $data{EC2}{meta}{$name};
+            if (ref $value eq 'HASH') {
+                $value = join '<br />'
+                       => map { "$_ = $data{EC2}{meta}{$name}{$_}" }
+                       sort keys %{$data{EC2}{meta}{$name}};
+                $name =~ s{/$}{};
+            }
+            else {
+                $value =~ s{\n}{<br />\n}g;
+            }
+        print qq{<tr><td>$name: </td><td><b>$value</b></td></tr>\n};
+        }
+    }
+
     print qq{</table></td></tr>\n\n};
 
     return;
