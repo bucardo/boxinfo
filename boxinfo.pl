@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.10';
+our $VERSION = '1.1.11';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -124,7 +124,7 @@ my %data = (
 my %distlist = (
     'redhat'    => ['redhat-release',    'Red Hat',   'release' ],
     'fedora'    => ['fedora-release',    'Fedora',    'release' ],
-    'SuSE'      => ['SuSE_release',      'SuSE',      'release' ],
+    'SuSE'      => ['SuSE-release',      'SuSE',      'release' ],
     'gentoo'    => ['gentoo-release',    'Gentoo',    'release' ],
     'debian'    => ['debian_version',    'Debian',    'version' ],
     'slackware' => ['slackware-release', 'Slackware', 'release' ],
