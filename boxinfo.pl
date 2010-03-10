@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.1.11';
+our $VERSION = '1.1.12';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -2400,6 +2400,7 @@ sub html_queues {
     print q{<tr><th>Block</th><th>Read ahead size</th><th>Scheduler</th></tr>};
     for my $name (sort keys %{$data{block}}) {
         my $q = $data{block}{$name};
+		$q->{scheduler} =~ s{(\[\w+\])}{<b>$1</b>};
         print qq{<tr><td>$name</td><td>$q->{readahead}</td><td>$q->{scheduler}</td></tr>\n};
     }
     print "</table></td></tr>\n\n";
