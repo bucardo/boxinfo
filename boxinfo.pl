@@ -1,6 +1,5 @@
 #!/usr/bin/env perl
 
-
 ## Gather important information about a box
 ## Output in a MediaWiki friendly format
 ##
