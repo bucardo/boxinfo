@@ -388,6 +388,7 @@ sub gather_vminfo {
                         $tempname->{$word} = qx{curl -s $uri};
                     }
                 }
+				return;
             }
             $data{EC2}{meta} = \%meta;
         }
@@ -897,7 +898,7 @@ sub gather_versions {
     run_command('postconf mail_version', 'tmp_version');
     $data{version}{postfix} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
 
-    unless ($opt{nosendmail}) {
+    if (! $opt{nosendmail}) {
         run_command('echo \\\$Z | sendmail -bt -d0', 'tmp_version');
         $data{version}{sendmail} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
     }
