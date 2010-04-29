@@ -388,7 +388,7 @@ sub gather_vminfo {
                         $tempname->{$word} = qx{curl -s $uri};
                     }
                 }
-				return;
+                return;
             }
             $data{EC2}{meta} = \%meta;
         }
