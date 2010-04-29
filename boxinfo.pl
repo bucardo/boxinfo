@@ -1449,7 +1449,7 @@ sub gather_postgresinfo {
             elsif ($db =~ /^\-\-/) {
                 ## EOR
             }
-            elsif ($db =~ /^\s+: (.+)/) {
+            elsif ($db =~ /^\s+[:\|] (.+)/) {
                 $c->{db}{$currname}{$n} .= "\n$1";
             }
             else {
