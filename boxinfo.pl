@@ -1708,7 +1708,7 @@ sub gather_postgresinfo {
             my $qdb = $info->{quoted_db_name};
             ## PostGIS
             for my $name (qw/postgis_full_version postgis_lib_build_date postgis_scripts_build_date/) {
-                $SQL = "SELECT $name()";
+                $SQL = "SET lc_messages='C'; SELECT $name()";
                 run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
                 $pinfo = $data{tmp_psql};
                 if ($pinfo !~ /ERROR/) {
