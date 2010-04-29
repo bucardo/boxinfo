@@ -984,14 +984,11 @@ sub gather_cpuinfo {
                 $data{numcpus}++;
                 $cpu = $value;
             }
+            if ($name eq 'cpu MHz') {
+                $data{cpuinfo}{$cpu}{speed} = (int $value) . ' MHz';
+			}
             else {
                 $data{cpuinfo}{$cpu}{$name} = $value;
-            }
-            if ($name eq 'model name') {
-                $data{cpu}{model} = $value;
-            }
-            if ($name eq 'cpu MHz') {
-                $data{cpu}{speed} = (int $value) . ' MHz';
             }
         }
     }
@@ -999,9 +996,9 @@ sub gather_cpuinfo {
         exists $data{'tmp_sysctl'} or run_command('sysctl -a', 'tmp_sysctl');
         my $info = $data{'tmp_sysctl'};
         if ($info =~ /hw.model:\s+(.+)/ or $info =~ /machdep.cpu.brand_string:\s+(.+)/) {
-            $data{cpu}{model} = $1;
+            $data{cpuinfo}{0}{'model name'} = $1;
             if ($1 =~ / (.+GHz)/) {
-                $data{cpu}{speed} = $1;
+                $data{cpuinfo}{0}{speed} = $1;
             }
         }
         if ($info =~ /hw.ncpu:\s+(.+)/) {
@@ -2020,7 +2017,7 @@ table.boxinfo td.activeip { color: black; font-weight: bolder; }
         goto HTMLEND;
     }
 
-    print qq{<tr><th>CPU:</th><td><b>$data{numcpus} x $data{cpu}{model} ($data{cpu}{speed})</b></td></tr>\n};
+	html_cpus();
 
     print qq{<tr><th>RAM:</th><td><b>$data{memory}{pretty}{Total}</b></td></tr>\n};
 
@@ -2105,6 +2102,50 @@ sub html_postgres {
     html_postgres_pgconfig();
     return;
 } ## end of html_postgres
+
+
+sub html_cpus {
+
+    return if ! exists $data{cpuinfo};
+
+	## CPUs may be different - if so, list individually
+	## If not, just say <number> x <info>
+
+	my $allthesame = 1;
+	my %cinfo;
+  CPU: for my $cpu (values %{$data{cpuinfo}}) {
+		for my $item ('model name', 'cache size', 'speed', 'cpu cores') {
+			next if ! exists $cpu->{$item};
+			$cpu->{$item} =~ s/\s+/ /g;
+			if (! exists $cinfo{$item}) {
+				$cinfo{$item} = $cpu->{$item};
+			}
+			elsif ($cpu->{$item} ne $cinfo{$item}) {
+				$allthesame=0;
+				last CPU;
+			}
+		}
+	}
+
+
+	if ($allthesame) {
+		my $cache = exists $cinfo{'cache size'} ? " Cache size: $cinfo{'cache size'}" : '';
+		print qq{<tr><th>CPU:</th><td><b>$data{numcpus} x $cinfo{'model name'} ($cinfo{speed})$cache</b></td></tr>\n};
+		return;
+	}
+
+	my @cpulist;
+	for my $num (sort { $a <=> $b } keys %{$data{cpuinfo}}) {
+		my $cpu = $data{cpuinfo}{$num};
+		my $cache = exists $cpu->{'cache size'} ? " Cache size: $cpu->{'cache size'}" : '';
+		push @cpulist => "CPU $num: $cpu->{'model name'} ($cpu->{speed})$cache";
+	}
+	my $cpulist = join '<br />' => @cpulist;
+	print qq{<tr><th>CPUs:</th><td><b>$cpulist</b></td></tr>\n};
+
+	return;
+
+} ## end of html_cpus
 
 
 sub html_vm {
