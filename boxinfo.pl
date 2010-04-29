@@ -1298,25 +1298,57 @@ sub gather_postgresinfo {
 
         run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
         my $pinfo = $data{tmp_psql};
+		## Need to figure out the problem, but we cannot set lc_messages first!
+		my $problem = '';
+
         if ($pinfo =~ /FATAL:  Ident authentication failed for user "postgres"/ and 0 == $>) {
-            warn "Direct psql call failed, trying su -l postgres\n";
-            $opt{use_su_postgres} = 1;
-            run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
-            $pinfo = $data{tmp_psql};
-        }
-        if ($pinfo =~ /FATAL:  role.+does not exist/ and exists $c->{user}) {
-            warn qq{Failed to connect to Postgres, retrying as user "$c->{user}"\n};
-            $ENV{PGUSER} = $c->{user};
-            $ENV{PGDATABASE} = 'postgres';
-            $opt{use_pg_user} = $c->{user};
-            run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
-            $pinfo = $data{tmp_psql};
-        }
-        if ($pinfo =~ /ERROR.+shobj_description/) {
-            ## Mismatched psql version, but non-plussed should work
-            run_command(qq{psql -X -x -t $usedir -p $port -c "\\l"}, 'tmp_psql');
-            $pinfo = $data{tmp_psql};
-        }
+			$problem = 'ident';
+		}
+        elsif ($pinfo =~ /FATAL:  role.+does not exist/ and exists $c->{user}) {
+			$problem = 'role';
+		}
+        elsif ($pinfo =~ /ERROR.+shobj_description/) {
+			$problem = 'mismatch';
+		}
+		elsif ($pinfo =~ /FATAL.+postgres/) {
+			$problem = 'ident role mismatch';
+		}
+
+	  RERUN: {
+			last if ! $problem;
+
+			if ($problem =~ s/ident//) {
+				warn "Direct psql call failed, trying su -l postgres\n";
+				$opt{use_su_postgres} = 1;
+				run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
+				$opt{use_su_postgres} = 0;
+				$pinfo = $data{tmp_psql};
+			}
+			elsif ($problem =~ s/role//) {
+				warn qq{Failed to connect to Postgres, retrying as user "$c->{user}"\n};
+				$ENV{PGUSER} = $c->{user};
+				$ENV{PGDATABASE} = 'postgres';
+				$opt{use_pg_user} = $c->{user};
+				run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
+				$pinfo = $data{tmp_psql};
+			}
+			elsif ($problem =~ s/mismatch//) {
+				## Mismatched psql version, but non-plussed should work
+				run_command(qq{psql -X -x -t $usedir -p $port -c "\\l"}, 'tmp_psql');
+				$pinfo = $data{tmp_psql};
+			}
+			else {
+				warn "Unhandled problem: $problem\n";
+				$problem = '';
+			}
+
+			## If we still have ways left to try and we failed in certain ways, try again
+			if ($problem =~ /\w/) {
+				if ($pinfo =~ /FATAL/ or $pinfo eq '?') {
+					redo RERUN;
+				}
+			}
+		}
 
         my $startupstring = 'database system is starting up';
 
