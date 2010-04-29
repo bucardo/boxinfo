@@ -1881,6 +1881,8 @@ sub run_command {
 
     printf {$tempfh} "\nCOMMAND: %s\nNAME: $name\nTIME: %s\nRESULT: ", $command, scalar localtime();
 
+	local $ENV{LC_ALL} = 'C';
+
     my $result;
     my $madeit = 0;
     alarm 0;
