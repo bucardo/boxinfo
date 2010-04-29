@@ -986,7 +986,7 @@ sub gather_cpuinfo {
             }
             if ($name eq 'cpu MHz') {
                 $data{cpuinfo}{$cpu}{speed} = (int $value) . ' MHz';
-			}
+            }
             else {
                 $data{cpuinfo}{$cpu}{$name} = $value;
             }
@@ -1295,57 +1295,57 @@ sub gather_postgresinfo {
 
         run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
         my $pinfo = $data{tmp_psql};
-		## Need to figure out the problem, but we cannot set lc_messages first!
-		my $problem = '';
+        ## Need to figure out the problem, but we cannot set lc_messages first!
+        my $problem = '';
 
         if ($pinfo =~ /FATAL:  Ident authentication failed for user "postgres"/ and 0 == $>) {
-			$problem = 'ident';
-		}
+            $problem = 'ident';
+        }
         elsif ($pinfo =~ /FATAL:  role.+does not exist/ and exists $c->{user}) {
-			$problem = 'role';
-		}
+            $problem = 'role';
+        }
         elsif ($pinfo =~ /ERROR.+shobj_description/) {
-			$problem = 'mismatch';
-		}
-		elsif ($pinfo =~ /FATAL.+postgres/) {
-			$problem = 'ident role mismatch';
-		}
+            $problem = 'mismatch';
+        }
+        elsif ($pinfo =~ /FATAL.+postgres/) {
+            $problem = 'ident role mismatch';
+        }
 
-	  RERUN: {
-			last if ! $problem;
+      RERUN: {
+            last if ! $problem;
 
-			if ($problem =~ s/ident//) {
-				warn "Direct psql call failed, trying su -l postgres\n";
-				$opt{use_su_postgres} = 1;
-				run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
-				$opt{use_su_postgres} = 0;
-				$pinfo = $data{tmp_psql};
-			}
-			elsif ($problem =~ s/role//) {
-				warn qq{Failed to connect to Postgres, retrying as user "$c->{user}"\n};
-				$ENV{PGUSER} = $c->{user};
-				$ENV{PGDATABASE} = 'postgres';
-				$opt{use_pg_user} = $c->{user};
-				run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
-				$pinfo = $data{tmp_psql};
-			}
-			elsif ($problem =~ s/mismatch//) {
-				## Mismatched psql version, but non-plussed should work
-				run_command(qq{psql -X -x -t $usedir -p $port -c "\\l"}, 'tmp_psql');
-				$pinfo = $data{tmp_psql};
-			}
-			else {
-				warn "Unhandled problem: $problem\n";
-				$problem = '';
-			}
+            if ($problem =~ s/ident//) {
+                warn "Direct psql call failed, trying su -l postgres\n";
+                $opt{use_su_postgres} = 1;
+                run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
+                $opt{use_su_postgres} = 0;
+                $pinfo = $data{tmp_psql};
+            }
+            elsif ($problem =~ s/role//) {
+                warn qq{Failed to connect to Postgres, retrying as user "$c->{user}"\n};
+                $ENV{PGUSER} = $c->{user};
+                $ENV{PGDATABASE} = 'postgres';
+                $opt{use_pg_user} = $c->{user};
+                run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
+                $pinfo = $data{tmp_psql};
+            }
+            elsif ($problem =~ s/mismatch//) {
+                ## Mismatched psql version, but non-plussed should work
+                run_command(qq{psql -X -x -t $usedir -p $port -c "\\l"}, 'tmp_psql');
+                $pinfo = $data{tmp_psql};
+            }
+            else {
+                warn "Unhandled problem: $problem\n";
+                $problem = '';
+            }
 
-			## If we still have ways left to try and we failed in certain ways, try again
-			if ($problem =~ /\w/) {
-				if ($pinfo =~ /FATAL/ or $pinfo eq '?') {
-					redo RERUN;
-				}
-			}
-		}
+            ## If we still have ways left to try and we failed in certain ways, try again
+            if ($problem =~ /\w/) {
+                if ($pinfo =~ /FATAL/ or $pinfo eq '?') {
+                    redo RERUN;
+                }
+            }
+        }
 
         my $startupstring = 'database system is starting up';
 
@@ -1910,7 +1910,7 @@ sub run_command {
 
     printf {$tempfh} "\nCOMMAND: %s\nNAME: $name\nTIME: %s\nRESULT: ", $command, scalar localtime();
 
-	local $ENV{LC_ALL} = 'C';
+    local $ENV{LC_ALL} = 'C';
 
     my $result;
     my $madeit = 0;
@@ -2017,7 +2017,7 @@ table.boxinfo td.activeip { color: black; font-weight: bolder; }
         goto HTMLEND;
     }
 
-	html_cpus();
+    html_cpus();
 
     print qq{<tr><th>RAM:</th><td><b>$data{memory}{pretty}{Total}</b></td></tr>\n};
 
@@ -2108,42 +2108,42 @@ sub html_cpus {
 
     return if ! exists $data{cpuinfo};
 
-	## CPUs may be different - if so, list individually
-	## If not, just say <number> x <info>
+    ## CPUs may be different - if so, list individually
+    ## If not, just say <number> x <info>
 
-	my $allthesame = 1;
-	my %cinfo;
+    my $allthesame = 1;
+    my %cinfo;
   CPU: for my $cpu (values %{$data{cpuinfo}}) {
-		for my $item ('model name', 'cache size', 'speed', 'cpu cores') {
-			next if ! exists $cpu->{$item};
-			$cpu->{$item} =~ s/\s+/ /g;
-			if (! exists $cinfo{$item}) {
-				$cinfo{$item} = $cpu->{$item};
-			}
-			elsif ($cpu->{$item} ne $cinfo{$item}) {
-				$allthesame=0;
-				last CPU;
-			}
-		}
-	}
+        for my $item ('model name', 'cache size', 'speed', 'cpu cores') {
+            next if ! exists $cpu->{$item};
+            $cpu->{$item} =~ s/\s+/ /g;
+            if (! exists $cinfo{$item}) {
+                $cinfo{$item} = $cpu->{$item};
+            }
+            elsif ($cpu->{$item} ne $cinfo{$item}) {
+                $allthesame=0;
+                last CPU;
+            }
+        }
+    }
 
 
-	if ($allthesame) {
-		my $cache = exists $cinfo{'cache size'} ? " Cache size: $cinfo{'cache size'}" : '';
-		print qq{<tr><th>CPU:</th><td><b>$data{numcpus} x $cinfo{'model name'} ($cinfo{speed})$cache</b></td></tr>\n};
-		return;
-	}
+    if ($allthesame) {
+        my $cache = exists $cinfo{'cache size'} ? " Cache size: $cinfo{'cache size'}" : '';
+        print qq{<tr><th>CPU:</th><td><b>$data{numcpus} x $cinfo{'model name'} ($cinfo{speed})$cache</b></td></tr>\n};
+        return;
+    }
 
-	my @cpulist;
-	for my $num (sort { $a <=> $b } keys %{$data{cpuinfo}}) {
-		my $cpu = $data{cpuinfo}{$num};
-		my $cache = exists $cpu->{'cache size'} ? " Cache size: $cpu->{'cache size'}" : '';
-		push @cpulist => "CPU $num: $cpu->{'model name'} ($cpu->{speed})$cache";
-	}
-	my $cpulist = join '<br />' => @cpulist;
-	print qq{<tr><th>CPUs:</th><td><b>$cpulist</b></td></tr>\n};
+    my @cpulist;
+    for my $num (sort { $a <=> $b } keys %{$data{cpuinfo}}) {
+        my $cpu = $data{cpuinfo}{$num};
+        my $cache = exists $cpu->{'cache size'} ? " Cache size: $cpu->{'cache size'}" : '';
+        push @cpulist => "CPU $num: $cpu->{'model name'} ($cpu->{speed})$cache";
+    }
+    my $cpulist = join '<br />' => @cpulist;
+    print qq{<tr><th>CPUs:</th><td><b>$cpulist</b></td></tr>\n};
 
-	return;
+    return;
 
 } ## end of html_cpus
 
@@ -2474,7 +2474,7 @@ sub html_queues {
     print q{<tr><th>Block</th><th>Read ahead size</th><th>Scheduler</th></tr>};
     for my $name (sort keys %{$data{block}}) {
         my $q = $data{block}{$name};
-		$q->{scheduler} =~ s{(\[\w+\])}{<b>$1</b>};
+        $q->{scheduler} =~ s{(\[\w+\])}{<b>$1</b>};
         print qq{<tr><td>$name</td><td>$q->{readahead}</td><td>$q->{scheduler}</td></tr>\n};
     }
     print "</table></td></tr>\n\n";
