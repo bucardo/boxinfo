@@ -3396,7 +3396,7 @@ sub html_postgres_postgis {
 
         for my $db (sort keys %{$data{postgres}{active_port}{$cluster}{db}}) {
             my $info = $data{postgres}{active_port}{$cluster}{db}{$db};
-            next if ! exists $info->{postgis};
+            next if ! exists $info->{postgis} or ! exists $info->{postgis}{postgis_full_version};
             print qq{<tr><th$vtop>${wrap1}&rarr; PostGIS<br />$port<br />$socketdir<br />$db</th><td><br /><table border="1" class="plain">\n};
             print qq{<tr><td>Version:</td><td><b>$info->{postgis}{postgis_full_version}</b></td></tr>\n};
             print "</table></td></tr>\n\n";
