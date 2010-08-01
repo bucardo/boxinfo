@@ -15,7 +15,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.1';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -1705,17 +1705,21 @@ sub gather_postgresinfo {
             next if $info->{canconn} eq 'No';
             my $qdb = $info->{quoted_db_name};
             ## PostGIS
-            for my $name (qw/postgis_full_version postgis_lib_build_date postgis_scripts_build_date/) {
-                $SQL = "SET lc_messages='C'; SELECT $name()";
-                run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
-                $pinfo = $data{tmp_psql};
-                if ($pinfo !~ /ERROR/) {
-                    $info->{postgis}{$name} = $data{tmp_psql};
-                    $c->{gotpostgis}++;
-                    $data{gotpostgis}++;
+            $SQL = "SELECT 1 FROM pg_proc WHERE proname = 'postgis_full_version'";
+            run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
+            $pinfo = $data{tmp_psql};
+            if ($pinfo =~ /1/) {
+                for my $name (qw/postgis_full_version postgis_lib_build_date postgis_scripts_build_date/) {
+                    $SQL = "SET lc_messages='C'; SELECT $name()";
+                    run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
+                    $pinfo = $data{tmp_psql};
+                    if ($pinfo !~ /ERROR/) {
+                        $info->{postgis}{$name} = $data{tmp_psql};
+                        $c->{gotpostgis}++;
+                        $data{gotpostgis}++;
+                    }
                 }
             }
-
             ## Others
           CNAME:
             for my $cname (sort keys %contrib_modules) {
@@ -3551,5 +3555,4 @@ sub escape_html {
   return $string;
 
 } ## end of escape_html
-
 
