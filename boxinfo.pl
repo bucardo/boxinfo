@@ -15,7 +15,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.2.1';
+our $VERSION = '1.2.2';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -1315,11 +1315,12 @@ sub gather_postgresinfo {
       RERUN: {
             last if ! $problem;
 
+			$opt{use_su_postgres} = 0;
+
             if ($problem =~ s/ident//) {
                 warn "Direct psql call failed, trying su -l postgres\n";
                 $opt{use_su_postgres} = 1;
                 run_command(qq{psql -X -x -t $usedir -p $port -c "\\l+"}, 'tmp_psql');
-                $opt{use_su_postgres} = 0;
                 $pinfo = $data{tmp_psql};
             }
             elsif ($problem =~ s/role//) {
@@ -1433,7 +1434,10 @@ sub gather_postgresinfo {
             }
         }
 
-        next if skip_pg_database($pinfo,$port,$dir);
+        if (skip_pg_database($pinfo,$port,$dir)) {
+			$opt{use_su_postgres} = 0;
+			next PG;
+		}
 
         ## If no match, see if we can get the complete socket
         if ($pinfo !~ /\|/ and $dir !~ m{^/}) {
@@ -1462,6 +1466,7 @@ sub gather_postgresinfo {
         }
         if ($pinfo !~ /\|/) {
             warn "Could not find database at host $dir and port $port\n";
+			$opt{use_su_postgres} = 0;
             next PG;
         }
 
@@ -1490,7 +1495,11 @@ sub gather_postgresinfo {
         my $SQL = 'SELECT datname,datistemplate,datallowconn,datconnlimit,age(datfrozenxid),datacl,pg_database_size(oid) FROM pg_database';
         run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
         $pinfo = $data{tmp_psql};
-        die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
+		if ($pinfo =~ /ERROR/ or $pinfo =~ /FATAL/) {
+			warn "Could not connect to Postgres: $pinfo\n";
+			$opt{use_su_postgres} = 0;
+			next PG;
+		}
 
         for my $db (split /\n/ => $pinfo) {
             my ($name,$template,$canconn,$limit,$age,$acl,$size) = split /\|/ => $db;
@@ -1629,7 +1638,7 @@ sub gather_postgresinfo {
             } ## end if db named bucardo
 
         } ## end BUCARDO
-        }
+        } ## end each db
 
         $SQL = q{SELECT nspname FROM pg_catalog.pg_namespace WHERE nspname !~ '^pg_' AND nspname <> 'information_schema'};
         for my $db (sort keys %{$c->{db}}) {
@@ -1747,6 +1756,7 @@ sub gather_postgresinfo {
         }
 
 
+		$opt{use_su_postgres} = 0;
 
 
     } ## end each active port
