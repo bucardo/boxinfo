@@ -1315,7 +1315,7 @@ sub gather_postgresinfo {
       RERUN: {
             last if ! $problem;
 
-			$opt{use_su_postgres} = 0;
+            $opt{use_su_postgres} = 0;
 
             if ($problem =~ s/ident//) {
                 warn "Direct psql call failed, trying su -l postgres\n";
@@ -1435,9 +1435,9 @@ sub gather_postgresinfo {
         }
 
         if (skip_pg_database($pinfo,$port,$dir)) {
-			$opt{use_su_postgres} = 0;
-			next PG;
-		}
+            $opt{use_su_postgres} = 0;
+            next PG;
+        }
 
         ## If no match, see if we can get the complete socket
         if ($pinfo !~ /\|/ and $dir !~ m{^/}) {
@@ -1466,7 +1466,7 @@ sub gather_postgresinfo {
         }
         if ($pinfo !~ /\|/) {
             warn "Could not find database at host $dir and port $port\n";
-			$opt{use_su_postgres} = 0;
+            $opt{use_su_postgres} = 0;
             next PG;
         }
 
@@ -1495,11 +1495,11 @@ sub gather_postgresinfo {
         my $SQL = 'SELECT datname,datistemplate,datallowconn,datconnlimit,age(datfrozenxid),datacl,pg_database_size(oid) FROM pg_database';
         run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
         $pinfo = $data{tmp_psql};
-		if ($pinfo =~ /ERROR/ or $pinfo =~ /FATAL/) {
-			warn "Could not connect to Postgres: $pinfo\n";
-			$opt{use_su_postgres} = 0;
-			next PG;
-		}
+        if ($pinfo =~ /ERROR/ or $pinfo =~ /FATAL/) {
+            warn "Could not connect to Postgres: $pinfo\n";
+            $opt{use_su_postgres} = 0;
+            next PG;
+        }
 
         for my $db (split /\n/ => $pinfo) {
             my ($name,$template,$canconn,$limit,$age,$acl,$size) = split /\|/ => $db;
@@ -1756,7 +1756,7 @@ sub gather_postgresinfo {
         }
 
 
-		$opt{use_su_postgres} = 0;
+        $opt{use_su_postgres} = 0;
 
 
     } ## end each active port
