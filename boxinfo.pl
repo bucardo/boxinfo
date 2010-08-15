@@ -1232,11 +1232,11 @@ sub gather_gems {
     run_command('gem list --local', 'tmp_gems');
     my $info = $data{tmp_gems};
 
-	return if $info !~ /\(\d+\.\d+/;
+    return if $info !~ /\(\d+\.\d+/;
 
-	while ($info =~ m{^(\w+) \((\d+\.\d+\.?\d*)\)}gsm) {
-		$data{gems}{$1} = $2;
-	}
+    while ($info =~ m{^(\w+) \((\d+\.\d+\.?\d*)\)}gsm) {
+        $data{gems}{$1} = $2;
+    }
 
     return;
 
@@ -3582,14 +3582,14 @@ sub html_gems {
 
     print qq{<tr><th$vtop>${wrap1}Ruby local gems:</th><td><br /><table border="1">\n};
 
-	my $table = make_table(
-		{
-			header => ['Gem','Version'],
-			data   => $data{gems},
-			onecol => 10,
-		});
+    my $table = make_table(
+        {
+            header => ['Gem','Version'],
+            data   => $data{gems},
+            onecol => 10,
+        });
 
-	print $table;
+    print $table;
 
     print "</table></td></tr>\n\n";
 
@@ -3613,48 +3613,48 @@ sub escape_html {
 
 sub make_table {
 
-	my $arg = shift;
+    my $arg = shift;
 
-	my $header = $arg->{header} or die;
-	my $data = $arg->{data} or die;
-	my $numitems = keys %$data;
+    my $header = $arg->{header} or die;
+    my $data = $arg->{data} or die;
+    my $numitems = keys %$data;
 
-	## How many items before we go to multiple columns?
-	my $onecol = $arg->{onecol} || 15;
+    ## How many items before we go to multiple columns?
+    my $onecol = $arg->{onecol} || 15;
 
-	## How many columns?
-	my $cols = $numitems <= $onecol ? 1
-		: $numitems <= $onecol*2 ? 2
-		: 3;
+    ## How many columns?
+    my $cols = $numitems <= $onecol ? 1
+        : $numitems <= $onecol*2 ? 2
+        : 3;
 
-	my $table = q{<tr>};
-	for (1..$cols) {
-		$table .= join '' => map { "<th>$_</th>" } @$header;
-	}
-	$table .= qq{</tr>\n};
+    my $table = q{<tr>};
+    for (1..$cols) {
+        $table .= join '' => map { "<th>$_</th>" } @$header;
+    }
+    $table .= qq{</tr>\n};
 
-	my $pos = 0;
-	for my $name (sort keys %$data) {
-		$pos++;
-		my $val = $data->{$name};
-		$table .= sprintf q{%s<td>%s</td><td>%s</td>%s},
-			1==$pos ? '<tr>' : '',
-			$name,
-			$val,
-			$pos==$cols ? "</tr>\n" : '';
-		if ($pos >= $cols) {
-			$pos = 0;
-		}
-	}
+    my $pos = 0;
+    for my $name (sort keys %$data) {
+        $pos++;
+        my $val = $data->{$name};
+        $table .= sprintf q{%s<td>%s</td><td>%s</td>%s},
+            1==$pos ? '<tr>' : '',
+            $name,
+            $val,
+            $pos==$cols ? "</tr>\n" : '';
+        if ($pos >= $cols) {
+            $pos = 0;
+        }
+    }
 
-	if ($pos and $pos < $cols) {
-		for ($pos .. $cols-1) {
-			$table .= '<td> &nbsp; </td>';
-		}
-		$table .= "</tr>\n";
-	}
+    if ($pos and $pos < $cols) {
+        for ($pos .. $cols-1) {
+            $table .= '<td> &nbsp; </td>';
+        }
+        $table .= "</tr>\n";
+    }
 
-	return $table;
+    return $table;
 
 } ## end of make_table
 
