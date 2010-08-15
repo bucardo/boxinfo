@@ -227,6 +227,9 @@ gather_lifekeeper();
 ## Heartbeat (Linux HA information)
 gather_heartbeat();
 
+## Ruby gems (local)
+gather_gems();
+
 GATHERDONE:
 
 ## remove any temporary constructs from the hash
@@ -1223,6 +1226,22 @@ sub gather_heartbeat {
 } ## end of gather_heartbeat
 
 
+sub gather_gems {
+
+    run_command('gem list --local', 'tmp_gems');
+    my $info = $data{tmp_gems};
+
+	return if $info !~ /\(\d+\.\d+/;
+
+	while ($info =~ m{^(\w+) \((\d+\.\d+\.?\d*)\)}gsm) {
+		$data{gems}{$1} = $2;
+	}
+
+    return;
+
+} ## end of gather_gems
+
+
 sub gather_postgresinfo {
 
     return if $opt{nopostgres};
@@ -2073,6 +2092,8 @@ table.boxinfo td.activeip { color: black; font-weight: bolder; }
     html_perlinfo();
 
     html_perlmodules();
+
+    html_gems();
 
     html_chkconfig();
 
@@ -3554,6 +3575,28 @@ sub html_aptitude {
 } ## end of html_aptitude
 
 
+sub html_gems {
+
+    return if ! exists $data{gems};
+
+    print qq{<tr><th$vtop>${wrap1}Ruby local gems:</th><td><br /><table border="1">\n};
+
+	my $table = make_table(
+		{
+			header => ['Gem','Version'],
+			data   => $data{gems},
+			onecol => 10,
+		});
+
+	print $table;
+
+    print "</table></td></tr>\n\n";
+
+    return;
+
+} ## end of html_gems
+
+
 sub escape_html {
 
   my $string = shift;
@@ -3565,4 +3608,53 @@ sub escape_html {
   return $string;
 
 } ## end of escape_html
+
+
+sub make_table {
+
+	my $arg = shift;
+
+	my $header = $arg->{header} or die;
+	my $data = $arg->{data} or die;
+	my $numitems = keys %$data;
+
+	## How many items before we go to multiple columns?
+	my $onecol = $arg->{onecol} || 15;
+
+	## How many columns?
+	my $cols = $numitems <= $onecol ? 1
+		: $numitems <= $onecol*2 ? 2
+		: 3;
+
+	my $table = q{<tr>};
+	for (1..$cols) {
+		$table .= join '' => map { "<th>$_</th>" } @$header;
+	}
+	$table .= qq{</tr>\n};
+
+	my $pos = 0;
+	for my $name (sort keys %$data) {
+		$pos++;
+		my $val = $data->{$name};
+		$table .= sprintf q{%s<td>%s</td><td>%s</td>%s},
+			1==$pos ? '<tr>' : '',
+			$name,
+			$val,
+			$pos==$cols ? "</tr>\n" : '';
+		if ($pos >= $cols) {
+			$pos = 0;
+		}
+	}
+
+	if ($pos and $pos < $cols) {
+		for ($pos .. $cols-1) {
+			$table .= '<td> &nbsp; </td>';
+		}
+		$table .= "</tr>\n";
+	}
+
+	return $table;
+
+} ## end of make_table
+
 
