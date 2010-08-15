@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+# -*-mode:cperl; indent-tabs-mode: nil-*-
 
 ## Gather important information about a box
 ## Output in a MediaWiki friendly format
