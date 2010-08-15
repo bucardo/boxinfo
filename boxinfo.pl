@@ -2,7 +2,7 @@
 # -*-mode:cperl; indent-tabs-mode: nil-*-
 
 ## Gather important information about a box
-## Output in a MediaWiki friendly format
+## Output in a HTML or MediaWiki friendly format
 ##
 ## Greg Sabino Mullane <greg@endpoint.com>
 ## Copyright End Point Corporation 2008-2010
@@ -66,11 +66,11 @@ my $quiet        = $opt{quiet} || 0;
 my $verbose      = $opt{verbose} || 0;
 my $use_balloons = exists $opt{useballoons} ? $opt{useballoons} : 1;
 my $timeout      = exists $opt{timeout} ? $opt{timeout} : 10;
-my $format = $opt{format} || 'wiki';
+my $format       = $opt{format} || 'wiki';
 
 $opt{use_su_postgres} = 0;
 
-my $version = qr{\d+\.\d+(?:\S*)};
+my $versionre = qr{\d+\.\d+(?:\S*)};
 
 my $vtop = ' style="vertical-align: top"';
 my $wrap1 = '<br />';
@@ -861,60 +861,60 @@ sub gather_versions {
             $maxtime = 30;
         }
         run_command("$prog --version", 'tmp_version', $maxtime);
-        $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## version
     for my $prog (qw/ openssl /) {
         run_command("$prog version", 'tmp_version');
-        $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## -version
     for my $prog (qw/ sqlite /) {
         run_command("$prog -version", 'tmp_version');
-        $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## -v
     for my $prog (qw/ lighttpd php rsyslogd slonik /) {
         run_command("$prog -v", 'tmp_version');
-        $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## -V
     for my $prog (qw/ nginx pgbouncer rcs sar ssh /) {
         run_command("$prog -V", 'tmp_version');
-        $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## -help
     for my $prog (qw/ zip /) {
         run_command("$prog -help", 'tmp_version');
-        $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## --help
     for my $prog (qw/ bzip2 ethtool nrpe 7zr /) {
         run_command("$prog --help", 'tmp_version');
-        $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## -h
     for my $prog (qw/ memcached /) {
         run_command("$prog -h", 'tmp_version');
-        $data{version}{$prog} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## Special cases
     run_command('postconf mail_version', 'tmp_version');
-    $data{version}{postfix} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+    $data{version}{postfix} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
 
     if (! $opt{nosendmail}) {
         run_command('echo \\\$Z | sendmail -bt -d0', 'tmp_version');
-        $data{version}{sendmail} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+        $data{version}{sendmail} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
 
     run_command('exim -bV', 'tmp_version');
-    $data{version}{exim} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+    $data{version}{exim} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
 
     run_command('mysql --version', 'tmp_version');
-    $data{version}{mysql} = ($data{tmp_version} =~ /($version) Distrib ([^,]+)/) ? "$2 ($1)" : $UNKNOWN_VERSION;
+    $data{version}{mysql} = ($data{tmp_version} =~ /($versionre) Distrib ([^,]+)/) ? "$2 ($1)" : $UNKNOWN_VERSION;
 
     run_command('vsftpd -v 0>&1', 'tmp_version');
-    $data{version}{vsftpd} = ($data{tmp_version} =~ /($version)/) ? $1 : $UNKNOWN_VERSION;
+    $data{version}{vsftpd} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
 
     ## Sometimes we get a trailing comma: remove
     ## Also remove unmatched trailing parens
@@ -1074,7 +1074,7 @@ sub gather_perlinfo {
         delete $data{tmp_module};
         my $COM = qq{perl -M$mod -e 'print \$${mod}::VERSION'};
         run_command($COM, 'tmp_module');
-        if ($data{tmp_module} =~ /^($version)/) {
+        if ($data{tmp_module} =~ /^($versionre)/) {
           $data{perlmodver}{$mod} = $1;
         }
     }
