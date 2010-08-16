@@ -2,7 +2,7 @@
 # -*-mode:cperl; indent-tabs-mode: nil-*-
 
 ## Gather important information about a box
-## Output in a HTML or MediaWiki friendly format
+## Output in HTML or MediaWiki friendly format
 ##
 ## Greg Sabino Mullane <greg@endpoint.com>
 ## Copyright End Point Corporation 2008-2010
@@ -29,9 +29,6 @@ For complete help, please visit:
 http://bucardo.org/wiki/Boxinfo
 
 ";
-
-my $UNKNOWN_VALUE = '?';
-my $UNKNOWN_VERSION = '?';
 
 my %opt;
 GetOptions(
@@ -70,28 +67,37 @@ my $format       = $opt{format} || 'wiki';
 
 $opt{use_su_postgres} = 0;
 
+## Used to identify the version of programs and Perl modules
 my $versionre = qr{\d+\.\d+(?:\S*)};
 
+## Inline CSS
 my $vtop = ' style="vertical-align: top"';
-my $wrap1 = '<br />';
 
-my $tempfile = 'boxinfo.debug';
-open my $tempfh, '>', $tempfile or die qq{Could not write "$tempfile": $!\n};
+## For ease of writing the HTML later on
+my $wrap = '<br />';
 
-printf {$tempfh} "PROGRAM: $0\nStart: %s\n", scalar localtime();
+## What to print if we can't figure out what something is
+my $UNKNOWN_VALUE = '?';
+my $UNKNOWN_VERSION = '?';
 
-my $hostname = qx{hostname};
-chomp $hostname;
-if (length $hostname) {
-    print {$tempfh} "HOST: $hostname\n";
-}
+## Dump the actual output of each command into a debug file
+my $debugfile = 'boxinfo.debug';
+open my $debugfh, '>', $debugfile or die qq{Could not write "$debugfile": $!\n};
+printf {$debugfh} "PROGRAM: $0\nStart: %s\n", scalar localtime();
 
+## When we leave for any reason, close the debug file and remove the temp file
 END {
-    defined $tempfh and (close $tempfh or die qq{Could not close "$tempfile": $!\n});
-    !$quiet and $tempfile and print "Raw data is in: $tempfile\n";
+    defined $debugfh and (close $debugfh or die qq{Could not close "$debugfile": $!\n});
+    !$quiet and print "Raw data is in $debugfile\n";
     unlink '/tmp/boxinfo.tmp';
 }
 
+## Figure out our hostname and the short version
+my $hostname = qx{hostname};
+chomp $hostname;
+if (length $hostname) {
+    print {$debugfh} "HOST: $hostname\n";
+}
 my $shorthost = $hostname;
 if ($shorthost =~ m{^(\w+\d\.\w+)\.\w+\.\w+$}) {
     $shorthost = $1;
@@ -100,6 +106,7 @@ else {
     $shorthost =~ s/^(.+?)\..+/$1/;
 }
 
+## Pick a client name for use in the page title
 my $clientname = 'ACME';
 if ($opt{client}) {
     $clientname = $opt{client};
@@ -108,6 +115,7 @@ elsif ($hostname =~ m{([^\.]+)\.\w+$}) {
     $clientname = ucfirst lc $1;
 }
 
+## We put the current time at the top of the report
 my $nowtime = qx{date};
 chomp $nowtime;
 
@@ -130,24 +138,6 @@ my %distlist = (
     'slackware' => ['slackware-release', 'Slackware', 'release' ],
     'mandrake'  => ['mandrake-release',  'Mandrake',  'release' ],
     'yellowdog' => ['yellowdog-release', 'Yellowdod', 'release' ],
-);
-
-my %contrib_modules = (
-    'citext'          => ['F:citext_smaller',        ''],
-    'cube'            => ['F:cube_distance',         ''],
-    'dblink'          => ['F:dblink_connect',        ''],
-    'earthdistance'   => ['F:earth_distance',        ''],
-    'fuzzystrmatch'   => ['F:dmetaphone_alt',        ''],
-    'hstore'          => ['F:hstore_out',            ''],
-    'intarray'        => ['F:intarray_del_elem',     ''],
-    'ltree'           => ['F:ltree2text',            ''],
-    'pgcrypto'        => ['F:gen_salt',              ''],
-    'pg_freespacemap' => ['F:pg_freespace',          ''],
-    'pgstattuple'     => ['F:pgstattuple',           ''],
-    'pg_trgm'         => ['F:show_trgm',             ''],
-    'tablefunc'       => ['F:crosstab4',             ''],
-    'tsearch2'        => ['F:to_tsvector',           '8.3'],
-    'uuid'            => ['F:uuid_ns_x500',          ''],
 );
 
 ## Gather versions of all kinds of programs (should be run first)
@@ -1751,6 +1741,24 @@ sub gather_postgresinfo {
             }
             ## Others
           CNAME:
+            my %contrib_modules = (
+                'citext'          => ['F:citext_smaller',        ''],
+                'cube'            => ['F:cube_distance',         ''],
+                'dblink'          => ['F:dblink_connect',        ''],
+                'earthdistance'   => ['F:earth_distance',        ''],
+                'fuzzystrmatch'   => ['F:dmetaphone_alt',        ''],
+                'hstore'          => ['F:hstore_out',            ''],
+                'intarray'        => ['F:intarray_del_elem',     ''],
+                'ltree'           => ['F:ltree2text',            ''],
+                'pgcrypto'        => ['F:gen_salt',              ''],
+                'pg_freespacemap' => ['F:pg_freespace',          ''],
+                'pgstattuple'     => ['F:pgstattuple',           ''],
+                'pg_trgm'         => ['F:show_trgm',             ''],
+                'tablefunc'       => ['F:crosstab4',             ''],
+                'tsearch2'        => ['F:to_tsvector',           '8.3'],
+                'uuid'            => ['F:uuid_ns_x500',          ''],
+            );
+
             for my $cname (sort keys %contrib_modules) {
                 my ($action,$version) = @{$contrib_modules{$cname}};
                 if ($action =~ s/F://) {
@@ -1943,7 +1951,7 @@ sub run_command {
 
     $verbose and warn "run_command $command => $name\n";
 
-    printf {$tempfh} "\nCOMMAND: %s\nNAME: $name\nTIME: %s\nRESULT: ", $command, scalar localtime();
+    printf {$debugfh} "\nCOMMAND: %s\nNAME: $name\nTIME: %s\nRESULT: ", $command, scalar localtime();
 
     local $ENV{LC_ALL} = 'C';
 
@@ -1968,18 +1976,18 @@ sub run_command {
     if (!$madeit) {
         $data{$name} = '?';
         $data{failed_command}{$command} = $@;
-        print {$tempfh} "FAIL ($@)\n";
+        print {$debugfh} "FAIL ($@)\n";
         return;
     }
     if (! defined $result)  {
         $data{$name} = $UNKNOWN_VALUE;
-        print {$tempfh} "UNDEFINED\n";
+        print {$debugfh} "UNDEFINED\n";
         return;
     }
 
     chomp $result;
     $data{$name} = $result;
-    print {$tempfh} "OK $result\n";
+    print {$debugfh} "OK $result\n";
 
     $verbose and warn "Command finished OK\n";
 
@@ -2200,7 +2208,7 @@ sub html_ec2 {
 
     return if ! exists $data{EC2};
 
-    print qq{<tr><th$vtop>${wrap1}EC2:</th><td><br /><table border="1" style="border: black solid 1px">};
+    print qq{<tr><th$vtop>${wrap}EC2:</th><td><br /><table border="1" style="border: black solid 1px">};
     for my $name (sort keys %{$data{EC2}}) {
         next if $name eq 'meta';
         print qq{<tr><td>$name: </td><td><b>$data{EC2}{$name}</b></td></tr>\n};
@@ -2251,7 +2259,7 @@ sub html_lsb {
 
     return if ! exists $data{lsb_release};
 
-    print qq{<tr><th$vtop>${wrap1}LSB info:</th><td><br /><table border="1" style="border: black solid 1px">};
+    print qq{<tr><th$vtop>${wrap}LSB info:</th><td><br /><table border="1" style="border: black solid 1px">};
     for my $name (sort keys %{$data{lsb_release}}) {
         print qq{<tr><td>$name: </td><td><b>$data{lsb_release}{$name}</b></td></tr>\n};
     }
@@ -2299,7 +2307,7 @@ sub html_kernel {
 
     return if !exists $data{'Kernel name'};
 
-    print qq{<tr><th$vtop>${wrap1}Kernel info:</th><td><br /><table border="1">};
+    print qq{<tr><th$vtop>${wrap}Kernel info:</th><td><br /><table border="1">};
     for my $name ('Kernel name', 'Kernel release', 'Kernel version', 'Hardware name', 'Processor', 'Hardware platform') {
         next if ! exists $data{$name} or $data{$name} eq 'unknown' or $data{$name} =~ /--help/;
         print qq{<tr><td>$name: </td><td><b>$data{$name}</b></td></tr>};
@@ -2315,7 +2323,7 @@ sub html_shared_memory {
 
     return if ! exists $data{memory}{shmmax};
 
-    print qq{<tr><th$vtop>${wrap1}Memory:</th><td><br /><table border="1">};
+    print qq{<tr><th$vtop>${wrap}Memory:</th><td><br /><table border="1">};
     print qq{<tr><td>shmmax: </td><td style="text-align: right"><b>$data{memory}{pretty}{shmmax}</b></td></tr>\n};
     print qq{<tr><td>shmmni: </td><td style="text-align: right"><b>$data{memory}{shmmni}</b></td></tr>\n};
     print qq{<tr><td>shmall: </td><td style="text-align: right"><b>$data{memory}{pretty}{shmall}</b></td></tr>\n};
@@ -2340,7 +2348,7 @@ sub html_shared_active {
 
     return if !exists $data{memory}{active_shared};
 
-    print qq{<tr><th$vtop>${wrap1}Active shared mem:</th><td><br /><table border="1">};
+    print qq{<tr><th$vtop>${wrap}Active shared mem:</th><td><br /><table border="1">};
     print qq{<tr><td>Active segments: </td><td style="text-align: right"><b>$data{memory}{active_shared}</b></td>\n};
     print qq{<td>Active semaphores: </td><td style="text-align: right"><b>$data{memory}{active_semaphores}</b></td>\n};
     print qq{<td>Active messages: </td><td style="text-align: right"><b>$data{memory}{active_messages}</b></td></tr>\n};
@@ -2355,7 +2363,7 @@ sub html_lifekeeper {
 
     return if !exists $data{lifekeeper};
 
-    print qq{<tr><th$vtop>${wrap1}Lifekeeper services:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Lifekeeper services:</th><td><br /><table border="1">\n};
     print qq{<tr><th>Service</th><th>Primary host</th><th>State</th></tr>\n};
     my $s = $data{lifekeeper}{service};
     for my $row (sort { $s->{$b}{prio} <=> $s->{$a}{prio} } keys %$s) {
@@ -2373,7 +2381,7 @@ sub html_heartbeat {
 
     return if !exists $data{heartbeat};
 
-    print qq{<tr><th$vtop>${wrap1}Linux HA:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Linux HA:</th><td><br /><table border="1">\n};
 
     if (exists $data{heartbeat}{active}) {
         print qq{<tr><th colspan="2">$data{heartbeat}{active}</tr>\n};
@@ -2417,7 +2425,7 @@ sub html_interfaces {
         $gotnotes = 1 if exists $data{interface}{$int}{POINTOPOINT};
     }
 
-    print qq{<tr><th$vtop>${wrap1}Interfaces:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Interfaces:</th><td><br /><table border="1">\n};
     printf q{<tr><th>Name</th><th>IP</th><th>Status</th><th>Speed</th>%s</tr>},
         $gotnotes ? q{<th>Notes</th>} : '';
     my $x;
@@ -2456,7 +2464,7 @@ sub html_routes {
 
     return if ! exists $data{route};
 
-    print qq{<tr><th$vtop>${wrap1}Routes:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Routes:</th><td><br /><table border="1">\n};
     print q{<tr><th>Destination</th><th>Gateway</th><th>Genmask</th><th>Interface</th></tr>};
     for my $r (@{$data{route}}) {
         print qq{<tr><td>$r->{dest}</td><td>$r->{gateway}</td><td>$r->{mask}</td><td>$r->{int}</td></tr>\n};
@@ -2472,7 +2480,7 @@ sub html_fs {
 
     return if ! exists $data{fs};
 
-    print qq{<tr><th$vtop>${wrap1}Mounting info:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Mounting info:</th><td><br /><table border="1">\n};
     print q{<tr><th>Name</th><th>Mount</th><th>Size/Used %</th><th>Inode %</th><th>Filesystem (options)</th></tr>};
     for my $fs (sort keys %{$data{fs}}) {
         my $d = $data{fs}{$fs};
@@ -2507,7 +2515,7 @@ sub html_queues {
 
     return if ! exists $data{block};
 
-    print qq{<tr><th$vtop>${wrap1}Kernel queue info:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Kernel queue info:</th><td><br /><table border="1">\n};
     print q{<tr><th>Block</th><th>Read ahead size</th><th>Scheduler</th></tr>};
     for my $name (sort keys %{$data{block}}) {
         my $q = $data{block}{$name};
@@ -2525,7 +2533,7 @@ sub html_disk_settings {
 
     return if ! exists $data{disk};
 
-    print qq{<tr><th$vtop>${wrap1}Disk information:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Disk information:</th><td><br /><table border="1">\n};
     print q{<tr><th>Name</th><th>Read ahead size</th><th>Scheduler</th></tr>};
     for my $fs (sort keys %{$data{fs}}) {
         my $d = $data{fs}{$fs};
@@ -2562,7 +2570,7 @@ sub html_versions {
     }
     return if ! $count;
 
-    print qq{<tr><th$vtop>${wrap1}Program versions:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Program versions:</th><td><br /><table border="1">\n};
     print q{<tr><th>Name</th><th>Version</th>};
     if ($count >= $TWOWRAP) {
         print q{<th>Name</th><th>Version</th>};
@@ -2614,7 +2622,7 @@ sub html_perlinfo {
 
     ## Where installed?
 
-    print qq{<tr><th$vtop>${wrap1}Perl info:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Perl info:</th><td><br /><table border="1">\n};
     print qq{<tr><td>Version:</td><td><b>$data{version}{perl}</b></td></tr>\n};
     ## Only one of these is needed
     (my $pver = $data{version}{perl}) =~ s/^(\d+\.\d+)\..*/$1/e;
@@ -2636,7 +2644,7 @@ sub html_perlmodules {
 
     return if ! exists $data{perlmodver};
 
-    print qq{<tr><th$vtop>${wrap1}Perl modules:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Perl modules:</th><td><br /><table border="1">\n};
     print q{<tr><th>Module</th><th>Version</th></tr>};
     my $BASE = 'http://search.cpan.org/dist';
     for my $mod (sort keys %{$data{perlmodver}}) {
@@ -2666,7 +2674,7 @@ sub html_chkconfig {
     my $TWOWRAP = 10;
     my $THREEWRAP = 20;
 
-    print qq{<tr><th$vtop>${wrap1}Started via chkconfig:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Started via chkconfig:</th><td><br /><table border="1">\n};
     my $count = keys %{$data{chkconfig}};
     my $offset = 0;
     for my $prog (sort keys %{$data{chkconfig}}) {
@@ -2704,7 +2712,7 @@ sub html_postgres_active {
 
     return if ! exists $data{postgres} or ! exists $data{postgres}{active_port};
 
-    print qq{<tr><th$vtop>${wrap1}Active Postgres clusters:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Active Postgres clusters:</th><td><br /><table border="1">\n};
 
     my ($extrasym, $extranotes) = (0,0);
     for my $cluster (keys %{$data{postgres}{active_port}}) {
@@ -2779,7 +2787,7 @@ sub html_postgres_config {
     }
     return if !$found;
 
-    print qq{<tr><th$vtop>${wrap1}&rarr; Postgres config:</th><td><br /><table border="1" class="plain">\n};
+    print qq{<tr><th$vtop>${wrap}&rarr; Postgres config:</th><td><br /><table border="1" class="plain">\n};
 
     ## We don't want to report on all config values, just interesting ones
     ## A = always show
@@ -3076,7 +3084,7 @@ sub html_postgres_recovery {
     }
     return if !$found;
 
-    print qq{<tr><th$vtop>${wrap1}&rarr; Postgres recovery.conf:</th><td><br /><table border="1" class="plain">\n};
+    print qq{<tr><th$vtop>${wrap}&rarr; Postgres recovery.conf:</th><td><br /><table border="1" class="plain">\n};
 
     print q{<tr><th>Cluster</th><th>recovery.conf</th></tr>};
     for my $cluster (sort { $a cmp $b } keys %{$data{postgres}{active_port}}) {
@@ -3104,7 +3112,7 @@ sub html_postgres_problems {
 
     return if ! exists $data{postgres} or ! exists $data{postgres}{problems};
 
-    print qq{<tr><th$vtop>${wrap1}&rarr; Postgres potential problems:</th><td><br /><table border="1" class="plain">\n};
+    print qq{<tr><th$vtop>${wrap}&rarr; Postgres potential problems:</th><td><br /><table border="1" class="plain">\n};
 
     print q{<tr><th>Cluster/<br />Database</th><th>Problem</th></tr>};
     for my $cluster (sort { $a cmp $b } keys %{$data{postgres}{active_port}}) {
@@ -3142,7 +3150,7 @@ sub html_postgres_pgconfig {
 
     return if ! exists $data{postgres} or ! exists $data{postgres}{pgconfig};
 
-    print qq{<tr><th$vtop>${wrap1}&rarr; pg_config info</th><td><br /><table border="1" class="plain">\n};
+    print qq{<tr><th$vtop>${wrap}&rarr; pg_config info</th><td><br /><table border="1" class="plain">\n};
     for my $row (sort keys %{$data{postgres}{pgconfig}}) {
         print qq{<tr><th>$row</th>\n};
         print qq{<td>$data{postgres}{pgconfig}{$row}</td>\n};
@@ -3168,7 +3176,7 @@ sub html_postgres_databases {
         next if exists $cinfo->{startingup};
         next if ! exists $cinfo->{setting}{data_directory};
         my $socketdir = $cinfo->{socketdir};
-        print qq{<tr><th$vtop>${wrap1}&rarr; PG DBs<br />$port<br />$socketdir</th><td><br /><table border="1" class="plain">\n};
+        print qq{<tr><th$vtop>${wrap}&rarr; PG DBs<br />$port<br />$socketdir</th><td><br /><table border="1" class="plain">\n};
 
         my ($usets,$useds,$usesl,$usebc) = (0,0,0,0);
         for my $db (keys %{$cinfo->{db}}) {
@@ -3265,7 +3273,7 @@ sub html_postgres_tablespaces {
         my $port = $info->{port} || '';
         my $socketdir = $info->{socketdir};
 
-        print qq{<tr><th$vtop>${wrap1}&rarr; Tablespace info<br />$port<br />$socketdir</th><td><br /><table border="1" class="plain">\n};
+        print qq{<tr><th$vtop>${wrap}&rarr; Tablespace info<br />$port<br />$socketdir</th><td><br /><table border="1" class="plain">\n};
         print qq{<tr><th>Name</th><th>Path</th></tr>\n};
         for my $name (sort keys %{$info->{dbtablespace}}) {
             my $path = $info->{dbtablespace}{$name}[0];
@@ -3294,7 +3302,7 @@ sub html_postgres_slony {
         for my $db (sort keys %{$data{postgres}{active_port}{$cluster}{db}}) {
             my $info = $data{postgres}{active_port}{$cluster}{db}{$db};
             next if ! exists $info->{slony};
-            print qq{<tr><th$vtop>${wrap1}&rarr; Slony info<br />$port<br />$socketdir<br />$db</th><td><br /><table border="1" class="plain">\n};
+            print qq{<tr><th$vtop>${wrap}&rarr; Slony info<br />$port<br />$socketdir<br />$db</th><td><br /><table border="1" class="plain">\n};
             my $paths = join '<br />' => @{$info->{slony}{paths}};
             my $tables = 'NONE!';
             if (defined $info->{slony}{tables}) {
@@ -3334,7 +3342,7 @@ sub html_postgres_bucardo {
         for my $db (sort keys %{$data{postgres}{active_port}{$cluster}{db}}) {
             my $info = $data{postgres}{active_port}{$cluster}{db}{$db};
             next if ! exists $info->{bucardo};
-            print qq{<tr><th$vtop>${wrap1}&rarr; Bucardo info<br />$port<br />$socketdir<br />$db</th><td><br /><table border="1" class="plain">\n};
+            print qq{<tr><th$vtop>${wrap}&rarr; Bucardo info<br />$port<br />$socketdir<br />$db</th><td><br /><table border="1" class="plain">\n};
 
             my $bc = $info->{bucardo};
 
@@ -3433,7 +3441,7 @@ sub html_postgres_postgis {
         for my $db (sort keys %{$data{postgres}{active_port}{$cluster}{db}}) {
             my $info = $data{postgres}{active_port}{$cluster}{db}{$db};
             next if ! exists $info->{postgis} or ! exists $info->{postgis}{postgis_full_version};
-            print qq{<tr><th$vtop>${wrap1}&rarr; PostGIS<br />$port<br />$socketdir<br />$db</th><td><br /><table border="1" class="plain">\n};
+            print qq{<tr><th$vtop>${wrap}&rarr; PostGIS<br />$port<br />$socketdir<br />$db</th><td><br /><table border="1" class="plain">\n};
             print qq{<tr><td>Version:</td><td><b>$info->{postgis}{postgis_full_version}</b></td></tr>\n};
             print "</table></td></tr>\n\n";
         }
@@ -3476,7 +3484,7 @@ sub html_ulimits {
 
     return if ! exists $data{ulimit};
 
-    print qq{<tr><th$vtop>${wrap1}User limits:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}User limits:</th><td><br /><table border="1">\n};
     print q{<tr><th>Name</th><th>Limit</th></tr>};
     for my $name (sort keys %{$data{ulimit}}) {
         my $limit = $data{ulimit}{$name};
@@ -3493,7 +3501,7 @@ sub html_envs {
 
     return if ! exists $data{ENV};
 
-    print qq{<tr><th$vtop>${wrap1}ENVs:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}ENVs:</th><td><br /><table border="1">\n};
     print qq{<tr><th>Name</th><th>Value</th></tr>\n};
 
     my $skipnames = join '|' =>
@@ -3524,7 +3532,7 @@ sub html_yum {
 
     return if ! exists $data{yum};
 
-    print qq{<tr><th$vtop>${wrap1}yum installs:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}yum installs:</th><td><br /><table border="1">\n};
     print qq{<tr><th>Name</th><th>Version</th>\n};
     print qq{<th>Name</th><th>Version</th></tr>\n};
 
@@ -3552,7 +3560,7 @@ sub html_aptitude {
 
     return if ! exists $data{aptitude};
 
-    print qq{<tr><th$vtop>${wrap1}apt-get installs:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}apt-get installs:</th><td><br /><table border="1">\n};
     print qq{<tr><th>Name</th><th>Automatic?</th>\n};
     print qq{<th>Name</th><th>Automatic</th></tr>\n};
 
@@ -3580,7 +3588,7 @@ sub html_gems {
 
     return if ! exists $data{gems};
 
-    print qq{<tr><th$vtop>${wrap1}Ruby local gems:</th><td><br /><table border="1">\n};
+    print qq{<tr><th$vtop>${wrap}Ruby local gems:</th><td><br /><table border="1">\n};
 
     my $table = make_table(
         {
