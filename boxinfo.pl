@@ -844,8 +844,8 @@ sub gather_versions {
       apt-get aptitude autoconf awk bash cc check_postgres.pl chkconfig convert curl cvs dpkg dovecot
       elinks emacs emerge find gcc gdb geos-config git gnome-panel gpg gzip iconv initdb interchange
       knock konquerer links make mii-tool nano ntpd pdns_server perl pg_config pg_dump
-      postgres psql puppet python rrdtool rsync ruby
-      screen sed service svn syslog syslog-ng tail_n_mail.plg vi vim yum /) {
+      postgres psql puppet python rrdtool rsync ruby s3cmd
+      screen sed service svn syslog syslog-ng tail_n_mail.pl tail_n_mail vi vim wget yum /) {
         my $maxtime = $timeout;
         if ('yum' eq $prog and 30 > $maxtime) {
             $maxtime = 30;
