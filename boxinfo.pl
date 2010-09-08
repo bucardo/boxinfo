@@ -845,7 +845,7 @@ sub gather_versions {
       elinks emacs emerge find gcc gdb geos-config git gnome-panel gpg gzip iconv initdb interchange
       knock konquerer links make mii-tool nano ntpd pdns_server perl pg_config pg_dump
       postgres psql puppet python rrdtool rsync ruby s3cmd
-      screen sed service svn syslog syslog-ng tail_n_mail.pl tail_n_mail vi vim wget yum /) {
+      screen sed service svn syslog syslog-ng tail_n_mail.pl tail_n_mail tcbmgr vi vim wget yum /) {
         my $maxtime = $timeout;
         if ('yum' eq $prog and 30 > $maxtime) {
             $maxtime = 30;
@@ -1568,6 +1568,7 @@ sub gather_postgresinfo {
             }
         }
 
+        ## Things individual to each database
         for my $db (sort keys %{$c->{db}}) {
             my $info = $c->{db}{$db};
             my $qdb = $info->{quoted_db_name};
@@ -1646,9 +1647,19 @@ sub gather_postgresinfo {
                 }
 
             } ## end if db named bucardo
+            } ## end BUCARDO
 
-        } ## end BUCARDO
+            ## pg_autovacuum settings
+            $SQL = q{SELECT * FROM pg_autovacuum};
+            run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
+            $pinfo = $data{tmp_autovac};
+exit;
+
+
         } ## end each db
+
+
+
 
         $SQL = q{SELECT nspname FROM pg_catalog.pg_namespace WHERE nspname !~ '^pg_' AND nspname <> 'information_schema'};
         for my $db (sort keys %{$c->{db}}) {
