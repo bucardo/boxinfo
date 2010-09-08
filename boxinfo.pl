@@ -1656,13 +1656,8 @@ sub gather_postgresinfo {
             $SQL = q{SELECT * FROM pg_autovacuum};
             run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_slony');
             $pinfo = $data{tmp_autovac};
-exit;
-
 
         } ## end each db
-
-
-
 
         $SQL = q{SELECT nspname FROM pg_catalog.pg_namespace WHERE nspname !~ '^pg_' AND nspname <> 'information_schema'};
         for my $db (sort keys %{$c->{db}}) {
@@ -1773,7 +1768,7 @@ exit;
                 'uuid'            => ['F:uuid_ns_x500',          ''],
             );
 
-            for my $cname (sort keys %contrib_modules) {
+          CNAME: for my $cname (sort keys %contrib_modules) {
                 my ($action,$version) = @{$contrib_modules{$cname}};
                 if ($action =~ s/F://) {
                     $SQL = "SELECT count(*) FROM pg_proc WHERE proname = '$action'";
