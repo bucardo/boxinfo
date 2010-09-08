@@ -859,7 +859,7 @@ sub gather_versions {
         $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
     ## -version
-    for my $prog (qw/ sqlite /) {
+    for my $prog (qw/ sqlite/) {
         run_command("$prog -version", 'tmp_version');
         $data{version}{$prog} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
     }
@@ -905,6 +905,9 @@ sub gather_versions {
 
     run_command('vsftpd -v 0>&1', 'tmp_version');
     $data{version}{vsftpd} = ($data{tmp_version} =~ /($versionre)/) ? $1 : $UNKNOWN_VERSION;
+
+    run_command('thrift -version', 'tmp_version');
+    $data{version}{thrift} = ($data{tmp_version} =~ /(\d+)/) ? $1 : $UNKNOWN_VERSION;
 
     ## Sometimes we get a trailing comma: remove
     ## Also remove unmatched trailing parens
