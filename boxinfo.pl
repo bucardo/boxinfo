@@ -3474,7 +3474,7 @@ sub html_mysql {
     print qq{<tr><td>Socket:</td><td><b>$data{mysql}{socket}</b></td></tr>\n};
     if ($data{mysql}{status}) {
         my $stat = join '<br />' => @{$data{mysql}{status}};
-        print qq{<tr><td>Status:</td><td><pre>$stat</pre></td></tr>\n};
+        print qq{<tr><td>Status:</td><td>$stat</td></tr>\n};
     }
 
     my $dbs = join '<br />' => map { "<b>$_</b> ($data{mysql}{database}{$_}{tables} tables)" }
