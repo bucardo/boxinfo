@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.3.2';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
