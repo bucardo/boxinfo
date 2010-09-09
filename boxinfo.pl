@@ -88,7 +88,7 @@ printf {$debugfh} "PROGRAM: $0\nStart: %s\n", scalar localtime();
 ## When we leave for any reason, close the debug file and remove the temp file
 END {
     defined $debugfh and (close $debugfh or die qq{Could not close "$debugfile": $!\n});
-    !$quiet and print "Raw data is in $debugfile\n";
+    !$quiet and defined $debugfile and print "Raw data is in $debugfile\n";
     unlink '/tmp/boxinfo.tmp';
 }
 
