@@ -3577,12 +3577,12 @@ sub html_aptitude {
     for my $name (sort { $a cmp $b } keys %{$data{aptitude}{installed}}) {
         my $auto = $data{aptitude}{installed}{$name} ? 'Yes' : 'No';
         if (1==$set) {
-        print qq{<tr><td>$name</td><td>$auto</td>\n};
-        $set = 2;
+            print qq{<tr><td>$name</td><td>$auto</td>\n};
+            $set = 2;
         }
         else {
-        print qq{<td>$name</td><td>$auto</td></tr>\n};
-        $set = 1;
+            print qq{<td>$name</td><td>$auto</td></tr>\n};
+            $set = 1;
         }
     }
     2==$set and print '<td>&nbsp;</td></tr>';
