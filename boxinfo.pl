@@ -845,7 +845,7 @@ sub gather_versions {
       elinks emacs emerge find gcc gdb geos-config git gnome-panel gpg gzip iconv initdb interchange
       knock konquerer links make mii-tool nano ntpd pdns_server perl pg_config pg_dump
       postgres psql puppet python rrdtool rsync ruby s3cmd
-      screen sed service svn syslog syslog-ng tail_n_mail.pl tail_n_mail tcbmgr vi vim wget yum /) {
+      screen sed service svn syslog syslog-ng tar tail_n_mail.pl tail_n_mail tcbmgr vi vim wget yum /) {
         my $maxtime = $timeout;
         if ('yum' eq $prog and 30 > $maxtime) {
             $maxtime = 30;
