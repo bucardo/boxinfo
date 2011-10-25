@@ -2855,7 +2855,6 @@ D debug_pretty_print              | off
 D debug_print_parse               | off               
 D debug_print_plan                | off               
 D debug_print_rewritten           | off               
-D default_do_language             | plpgsql           
 A default_statistics_target       | 10 or 100         
 D default_tablespace              |                   
 D default_text_search_config      | pg_catalog.english
@@ -2876,6 +2875,7 @@ D enable_seqscan                  | on
 D enable_sort                     | on                
 D enable_tidscan                  | on                
 D escape_string_warning           | on                
+D exit_on_error                   | off
 D explain_pretty_print            | on                
 D external_pid_file               |                   
 D extra_float_digits              | 0                 
@@ -2890,7 +2890,9 @@ D geqo_seed                       | 0
 D geqo_selection_bias             | 2                 
 D geqo_threshold                  | 12                
 D gin_fuzzy_search_limit          | 0                 
-A hba_file                        |                   
+A hba_file                        |    
+D hot_standby                     | off
+D hot_standby_feedback            | off              
 A ident_file                      |                   
 D ignore_system_indexes           | off               
 A integer_datetimes               | on               
@@ -2919,6 +2921,7 @@ D log_disconnections              | off
 D log_duration                    | off               
 D log_error_verbosity             | default           
 D log_executor_stats              | off               
+D log_file_mode                   | 0600                   
 A log_filename                    |                   
 D log_hostname                    | off               
 D log_line_prefix                 |                   
@@ -2945,6 +2948,7 @@ D max_function_args               | 100
 D max_identifier_length           | 63                
 D max_index_keys                  | 32                
 D max_locks_per_transaction       | 64                
+D max_pred_locks_per_transaction  | 64                
 A max_prepared_transactions       | 5                 
 D max_stack_depth                 | 2048              
 D max_standby_archive_delay       | 30000                
@@ -2954,7 +2958,10 @@ D password_encryption             | on
 D port                            | 5432              
 D post_auth_delay                 | 0                 
 D pre_auth_delay                  | 0                 
+D quote_all_identifiers           | off 
 A random_page_cost                |                   
+D replication_timeout             | 60000
+D restart_after_crash             | on
 D regex_flavor                    | advanced          
 D search_path                     | "$user",public    
 D segment_size                    | 131072            
@@ -2975,7 +2982,8 @@ D statement_timeout               | 0
 D stats_temp_directory            | pg_stat_tmp       
 D superuser_reserved_connections  | 3                 
 D synchronize_seqscans            | on                
-D synchronous_commit              | on                
+D synchronous_commit              | on 
+D synchronous_standby_names       |                
 D syslog_facility                 | LOCAL0            
 D syslog_ident                    | postgres          
 D tcp_keepalives_count            | 0                 
@@ -2991,7 +2999,8 @@ D trace_sort                      | off
 D track_activities                | on                
 D track_activity_query_size       | 1024              
 D track_counts                    | on                
-D track_functions                 | none              
+D track_functions                 | none 
+D transaction_defferable          | off              
 D transaction_isolation           | read committed    
 D transaction_read_only           | off               
 D transform_null_equals           | off               
@@ -3008,9 +3017,11 @@ D vacuum_defer_cleanup_age        | 0
 D vacuum_freeze_min_age           | 100000000         
 D vacuum_freeze_table_age         | 150000000         
 D wal_block_size                  | 8192              
-D wal_buffers                     | 8                 
+D wal_buffers                     | 8   
+D wal_debug                       | off               
 D wal_keep_segments               | 0              
-A wal_level                       | minimal              
+A wal_level                       | minimal  
+D wal_receiver_status_interval    | 10            
 D wal_segment_size                | 2048              
 D wal_sender_delay                | 200              
 A wal_sync_method                 | fdatasync         
