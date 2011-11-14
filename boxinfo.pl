@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.3.4';
+our $VERSION = '1.3.5';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -91,6 +91,50 @@ END {
     !$quiet and defined $debugfile and print "Raw data is in $debugfile\n";
     unlink '/tmp/boxinfo.tmp';
 }
+
+## Output messages per language
+my %msg = (
+'en' => {
+    'time-day'           => q{day},
+    'time-days'          => q{days},
+    'time-hour'          => q{hour},
+    'time-hours'         => q{hours},
+    'time-minute'        => q{minute},
+    'time-minutes'       => q{minutes},
+    'time-month'         => q{month},
+    'time-months'        => q{months},
+    'time-second'        => q{second},
+    'time-seconds'       => q{seconds},
+    'time-week'          => q{week},
+    'time-weeks'         => q{weeks},
+    'time-year'          => q{year},
+    'time-years'         => q{years},
+},
+'fr' => {
+    'time-day'           => q{jour},
+    'time-days'          => q{jours},
+    'time-hour'          => q{heure},
+    'time-hours'         => q{heures},
+    'time-minute'        => q{minute},
+    'time-minutes'       => q{minutes},
+    'time-month'         => q{mois},
+    'time-months'        => q{mois},
+    'time-second'        => q{seconde},
+    'time-seconds'       => q{secondes},
+    'time-week'          => q{semaine},
+    'time-weeks'         => q{semaines},
+    'time-year'          => q{année},
+    'time-years'         => q{années},
+},
+'de' => {
+},
+'es' => {
+},
+);
+
+## Figure out which language to use for output
+our $lang = $ENV{LC_ALL} || $ENV{LC_MESSAGES} || $ENV{LANG} || 'en';
+$lang = substr($lang,0,2);
 
 ## Figure out our hostname and the short version
 my $hostname = qx{hostname};
@@ -1894,21 +1938,167 @@ sub pretty_conf {
 
     return $newval if $unit eq '???';
 
-    if ($unit eq 's') {
-        $newval = "$val seconds";
+    ## -1 is always 'off'
+    if ('-1' eq $val) {
+        if ($name eq 'autovacuum_vacuum_cost_delay') {
+            $newval = '-1 (use vacuum_cost_delay)';
+        }
+        elsif ($name eq 'autovacuum_vacuum_cost_limit') {
+            $newval = '-1 (use vacuum_cost_limit)';
+        }
+        else {
+            $newval = '-1 (off)';
+        }
     }
-    elsif ($unit eq '8kB' or $name =~
-           /\b(?:effective_cache_size|shared_buffers|wal_buffers|temp_buffers)\b/) {
+    ## 0 can have a special meaning, but never gets expanded per below
+    elsif ('0' eq $val) {
+        if ($name eq 'log_temp_files') {
+            $newval = '0 (log all temporary files)';
+        }
+        elsif ($name eq 'log_min_duration_statement') {
+            $newval = '0 (log all durations)';
+        }
+        elsif ($name eq 'log_autovacuum_min_duration') {
+            $newval = '0 (log all autovac activity)';
+        }
+        elsif ($name eq 'archive_timeout' or $name eq 'checkpoint_warning') {
+            $newval = '0 (off)';
+        }
+        elsif ($name eq 'log_rotation_size' or $name eq 'log_rotation_age') {
+            $newval = '0 (no rotation)';
+        }
+        elsif ($name eq 'statement_timeout') {
+            $newval = '0 (disabled)';
+        }
+        else {
+            $newval = '0';
+        }
+    }
+    elsif ($unit eq 's' or $unit eq 'ms' or $unit eq 'min') {
+        if (0 == $val) {
+            $newval = '0';
+        }
+        else {
+            $newval = sprintf '%s (%s)', $val, pretty_time
+                ($unit eq 's' ? $val : $unit eq 'ms' ? ($val/1000) : ($val*60));
+        }
+    }
+    elsif ($unit eq '8kB') {
         $newval = !$val ? $val : sprintf "$val (%s)", pretty_size($val*8192);
     }
-    elsif ($unit eq 'kB' or $name =~
-           /\b(?:log_rotation_size|log_temp_files|maintenance_work_mem|max_stack_depth|work_mem)\b/) {
+    elsif ($unit eq 'kB') {
         $newval = !$val ? $val : sprintf "$val (%s)", pretty_size($val*1024);
     }
 
     return $newval;
 
-} ## end of pretty_size
+} ## end of pretty_conf
+
+
+sub msg { ## no critic
+
+    my $name = shift || '?';
+
+    my $msg = '';
+
+    if (exists $msg{$lang}{$name}) {
+        $msg = $msg{$lang}{$name};
+    }
+    elsif (exists $msg{'en'}{$name}) {
+        $msg = $msg{'en'}{$name};
+    }
+    else {
+        my $line = (caller)[2];
+        die qq{Invalid message "$name" from line $line\n};
+    }
+
+    my $x=1;
+    {
+        my $val = $_[$x-1];
+        $val = '?' if ! defined $val;
+        last unless $msg =~ s/\$$x/$val/g;
+        $x++;
+        redo;
+    }
+    return $msg;
+
+} ## end of msg
+
+
+sub pretty_time {
+
+    ## Transform number of seconds to a more human-readable format
+    ## First argument is number of seconds
+    ## Second optional arg is highest transform: s,m,h,d,w
+    ## If uppercase, it indicates to "round that one out"
+
+    my $sec = shift;
+    my $tweak = shift || '';
+
+    ## Round to two decimal places, then trim the rest
+    $sec = sprintf '%.2f', $sec;
+    $sec =~ s/0+$//o;
+    $sec =~ s/\.$//o;
+
+    ## Just seconds (< 2:00)
+    if ($sec < 120 or $tweak =~ /s/) {
+        return sprintf "$sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+    }
+
+    ## Minutes and seconds (< 60:00)
+    if ($sec < 60*60 or $tweak =~ /m/) {
+        my $min = int $sec / 60;
+        $sec %= 60;
+        my $ret = sprintf "$min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /S/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        return $ret;
+    }
+
+    ## Hours, minutes, and seconds (< 48:00:00)
+    if ($sec < 60*60*24*2 or $tweak =~ /h/) {
+        my $hour = int $sec / (60*60);
+        $sec -= ($hour*60*60);
+        my $min = int $sec / 60;
+        $sec -= ($min*60);
+        my $ret = sprintf "$hour %s", $hour==1 ? msg('time-hour') : msg('time-hours');
+        $min and $tweak !~ /M/ and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /[SM]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        return $ret;
+    }
+
+    ## Days, hours, minutes, and seconds (< 28 days)
+    if ($sec < 60*60*24*28 or $tweak =~ /d/) {
+        my $day = int $sec / (60*60*24);
+        $sec -= ($day*60*60*24);
+        my $our = int $sec / (60*60);
+        $sec -= ($our*60*60);
+        my $min = int $sec / 60;
+        $sec -= ($min*60);
+        my $ret = sprintf "$day %s", $day==1 ? msg('time-day') : msg('time-days');
+        $our and $tweak !~ /H/     and $ret .= sprintf " $our %s", $our==1 ? msg('time-hour')   : msg('time-hours');
+        $min and $tweak !~ /[HM]/  and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
+        $sec and $tweak !~ /[HMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+        return $ret;
+    }
+
+    ## Weeks, days, hours, minutes, and seconds (< 28 days)
+    my $week = int $sec / (60*60*24*7);
+    $sec -= ($week*60*60*24*7);
+    my $day = int $sec / (60*60*24);
+    $sec -= ($day*60*60*24);
+    my $our = int $sec / (60*60);
+    $sec -= ($our*60*60);
+    my $min = int $sec / 60;
+    $sec -= ($min*60);
+    my $ret = sprintf "$week %s", $week==1 ? msg('time-week') : msg('time-weeks');
+    $day and $tweak !~ /D/      and $ret .= sprintf " $day %s", $day==1 ? msg('time-day')    : msg('time-days');
+    $our and $tweak !~ /[DH]/   and $ret .= sprintf " $our %s", $our==1 ? msg('time-hour')   : msg('time-hours');
+    $min and $tweak !~ /[DHM]/  and $ret .= sprintf " $min %s", $min==1 ? msg('time-minute') : msg('time-minutes');
+    $sec and $tweak !~ /[DHMS]/ and $ret .= sprintf " $sec %s", $sec==1 ? msg('time-second') : msg('time-seconds');
+
+    return $ret;
+
+} ## end of pretty_time
 
 
 sub ip2hostname {
@@ -2806,7 +2996,7 @@ sub html_postgres_config {
 my $pg_settings = q{
 D add_missing_from                | off               
 D allow_system_table_mods         | off               
-D application_name                |                   
+S application_name                |                   
 D archive_command                 | (disabled)        
 D archive_mode                    | off               
 D archive_timeout                 | 0                 
