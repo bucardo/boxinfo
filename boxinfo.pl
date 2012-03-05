@@ -1328,7 +1328,7 @@ sub gather_postgresinfo {
     run_command($pg_config, 'tmp_pgconfig');
     my $info = $data{tmp_pgconfig};
     if ($info !~ /BINDIR/) {
-        warn "Call to $pg_config failed: custom path?\n";
+        $verbose and warn "Call to $pg_config failed: custom path?\n";
     }
     else {
         %{$data{postgres}{pgconfig}} = map { m/(.+?) = (.*)/; $1,$2; } split /\n/ => $info;
