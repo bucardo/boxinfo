@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.3.5';
+our $VERSION = '1.4.0';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -213,6 +213,9 @@ gather_memory();
 
 ## Is it a VM?
 gather_vminfo();
+
+## RightScale information
+gather_rightscale();
 
 ## Grab all cron information we can find
 gather_croninfo();
@@ -460,6 +463,40 @@ sub gather_vminfo {
     return;
 
 } ## end of gather_vminfo
+
+
+sub gather_rightscale {
+
+
+    ## If /etc/rightscale.d exists, we can be pretty sure this is a RightScale box
+
+    my $dir = '/etc/rightscale.d';
+
+    return if ! -d $dir;
+
+    $data{RightScale} = {};
+
+    ## What type of cloud?
+    my $file = "$dir/cloud";
+    if (open my $fh, '<', $file) {
+        ## Simply grab the first line
+        $data{RightScale}{cloud} = <$fh>;
+        chomp $data{RightScale}{cloud};
+        close $fh or warn qq{Could not close "$file": $!\n};
+    }
+
+    ## What version?
+    $file = "$dir/rightscale-release";
+    if (open my $fh, '<', $file) {
+        ## Simply grab the first line
+        $data{RightScale}{version} = <$fh>;
+        chomp $data{RightScale}{version};
+        close $fh or warn qq{Could not close "$file": $!\n};
+    }
+
+    return;
+
+} ## end of gather_rightscale
 
 
 sub gather_memory {
@@ -2265,6 +2302,8 @@ table.boxinfo td.activeip { color: black; font-weight: bolder; }
 
     html_vm();
 
+    html_rightscale();
+
     html_ec2();
 
     html_uptime();
@@ -2402,6 +2441,25 @@ sub html_vm {
 
 } ## end of html_vm
 
+
+sub html_rightscale {
+
+    return if ! exists $data{RightScale};
+
+    ## We assume a version is always provided
+    ## The cloud, however, may not be there
+    print qq{<tr><th>RightScale:</th><td>Release <b>$data{RightScale}{version}</b>};
+
+    if (exists $data{RightScale}{cloud}) {
+        printf ' Cloud: %s',
+            (defined $data{RightScale}{cloud} and length $data{RightScale}{cloud})
+            ? "<b>$data{RightScale}{cloud}</b>" : '?';
+    }
+    print qq{</td></tr>\n\n};
+
+    return;
+
+} ## end of html_rightscale
 
 sub html_ec2 {
 
@@ -3882,5 +3940,4 @@ sub make_table {
     return $table;
 
 } ## end of make_table
-
 
