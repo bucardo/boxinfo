@@ -3317,7 +3317,7 @@ D zero_damaged_pages              | off
                 my $def = $pgs{$var}->{value};
                 $def =~ s/\n/ /g;
                 $def = '(empty string)' if $def =~ /^\s*$/;
-                if ($use_balloons) {
+                if ($use_balloons and $format eq 'wiki') {
                     $source = "<balloon title='Default is: $def'>$source</balloon>";
                 }
             }
