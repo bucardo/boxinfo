@@ -2249,7 +2249,7 @@ sub create_html_output {
     my $iplist = join "<br />\n" => @ip;
 
     if ('html' eq $format) {
-        print q{<style>
+        print q{<style type="text/css">
 table.boxinfo th { color: #006600; vertical-align: top; padding-top: 7px; padding-bottom: 15px; text-align: left; padding-left: 5px; padding-right: 5px; }
 
 table { empty-cells: show; margin-bottom: 20px; }
@@ -3327,7 +3327,7 @@ D zero_damaged_pages              | off
         }
         my $number = @var;
         my $firstrow = 1;
-        print qq{<tr><th rowspan="$number">$port<br >$socketdir</th>};
+        print qq{<tr><th rowspan="$number">$port<br />$socketdir</th>};
         for my $var (@var) {
             printf qq{%s<td>$var->[0]</td><td><b>%s</b></td><td>$var->[2]</td></tr>\n},
                 $firstrow ? '' : '<tr>',
@@ -3371,7 +3371,7 @@ sub html_postgres_recovery {
         my $recfile = $c->{recfile};
         $recfile =~ s/ +/ /g;
         $recfile =~ s{\n}{<br />\n};
-        print qq{<tr><th>$port<br >$socketdir</th><td>$recfile</td></tr>\n};
+        print qq{<tr><th>$port<br />$socketdir</th><td>$recfile</td></tr>\n};
     }
 
     print qq{</table></td></tr>\n\n};
@@ -3408,7 +3408,7 @@ sub html_postgres_problems {
                 }
                 $problems .= "</ul>\n";
             }
-            print qq{<tr><th>$port<br >$socketdir<br />$db</th><td>$problems</td></tr>\n};
+            print qq{<tr><th>$port<br />$socketdir<br />$db</th><td>$problems</td></tr>\n};
         }
     }
 
