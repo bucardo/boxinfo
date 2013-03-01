@@ -2249,7 +2249,15 @@ sub create_html_output {
     my $iplist = join "<br />\n" => @ip;
 
     if ('html' eq $format) {
-        print q{<style type="text/css">
+        print qq{<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title>boxinfo: Gather system information</title>
+<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+<meta name="generator" content="boxinfo $VERSION" />
+
+<style type="text/css">
 table.boxinfo th { color: #006600; vertical-align: top; padding-top: 7px; padding-bottom: 15px; text-align: left; padding-left: 5px; padding-right: 5px; }
 
 table { empty-cells: show; margin-bottom: 20px; }
@@ -2268,7 +2276,9 @@ table.plain th { border: solid #000000 1px; padding: 5px; }
 
 table.boxinfo td.activeip { color: black; font-weight: bolder; }
 
-</style>};
+</style>
+</head>
+<body>};
 
     }
 
@@ -2363,6 +2373,11 @@ table.boxinfo td.activeip { color: black; font-weight: bolder; }
 print q{
 </table>
 };
+    if ('html' eq $format) {
+        print q{
+</body>
+</html>};
+	}
 
     select $oldselect;
     close $fh or die qq{Could not close "$file": $!\n};
