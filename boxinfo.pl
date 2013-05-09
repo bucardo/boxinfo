@@ -1607,17 +1607,6 @@ sub gather_postgresinfo {
             ($info->{quoted_db_name} = $name) =~ s/"/\\"/g;
         }
 
-        ## Tablespace info
-        $SQL = 'SELECT spcname, spcowner, spclocation, spcacl FROM pg_tablespace';
-        run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
-        $pinfo = $data{tmp_psql};
-        for my $db (split /\n/ => $pinfo) {
-            my ($name,$owner,$location,$acl) = split /\|/ => $db;
-            next if ($name eq 'pg_default' or $name eq 'pg_global') and $location !~ /\w/;
-            my $info = $c->{dbtablespace}{$name} = [$location,$owner,$acl];
-            $data{gottablespaces} = 1;
-        }
-
         $SQL = 'SELECT version()';
         run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
         $pinfo = $data{tmp_psql};
@@ -1630,6 +1619,21 @@ sub gather_postgresinfo {
         $c->{version}{minor} = $2;
         $ver = $c->{version}{majmin} = "$1.$2";
         ($c->{version}{revision} = $3) =~ s/^\.//;
+
+        ## Tablespace info
+        if ($ver >= 9.2) {
+            $SQL = 'SELECT spcname, spcowner, pg_tablespace_location(oid) as spclocation, spcacl FROM pg_tablespace';
+		} else {
+            $SQL = 'SELECT spcname, spcowner, spclocation, spcacl FROM pg_tablespace';
+        }
+        run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
+        $pinfo = $data{tmp_psql};
+        for my $db (split /\n/ => $pinfo) {
+            my ($name,$owner,$location,$acl) = split /\|/ => $db;
+            next if ($name eq 'pg_default' or $name eq 'pg_global') and $location !~ /\w/;
+            my $info = $c->{dbtablespace}{$name} = [$location,$owner,$acl];
+            $data{gottablespaces} = 1;
+        }
 
         $SQL = 'SELECT name,source,unit,setting FROM pg_settings';
         if ($ver < 8.2) {
