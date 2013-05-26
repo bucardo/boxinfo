@@ -2,3 +2,9 @@ Some todo items:
 
 * Similar to the postgresql.conf settings, only show the interesting or changed values of bucardo_config
 * Support for other things: Apache, MySQL, etc.
+* Better Bucardo support: use all internal Bucardo tables
+* Add time-dependent things such as iostat and txns/second, either by sleeping or
+  picking up information from a previous run somehow.
+* Internationalize things
+* Use pg_controldata output
+* Display information from the pg_autovacuum table / reloptions column.
