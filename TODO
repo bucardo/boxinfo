@@ -1,0 +1,4 @@
+Some todo items:
+
+* Similar to the postgresql.conf settings, only show the interesting or changed values of bucardo_config
+* Support for other things: Apache, MySQL, etc.
