@@ -8,3 +8,4 @@ Some todo items:
 * Internationalize things
 * Use pg_controldata output
 * Display information from the pg_autovacuum table / reloptions column.
+* Check out http://linuxmafia.com/faq/Admin/release-files.html
