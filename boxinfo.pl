@@ -3669,7 +3669,7 @@ sub html_postgres_bucardo {
             my $configs = 'NONE?!';
             if (keys %{$bc->{bucardo_config}}) {
                 $configs = join '<br />', map { "$_: $bc->{bucardo_config}{$_}{value}" }
-                    sort keys %{$bc->{bucardo_config}};
+                    sort grep { defined $bc->{bucardo_config}{$_}{value} } keys %{$bc->{bucardo_config}};
             }
 
             my $tables = '';
