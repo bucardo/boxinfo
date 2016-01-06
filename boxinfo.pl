@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.1';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -3801,7 +3801,8 @@ sub html_envs {
     print qq{<tr><th>Name</th><th>Value</th></tr>\n};
 
     my $skipnames = join '|' =>
-        qw/COLORTERM DISPLAY G_BROKEN_FILENAMES LS_COLORS OLDPWD PGUSER PWD SHLVL STY TERM TERMCAP XAUTHORITY GCC_SPECS PS1/;
+        qw/COLORTERM DISPLAY G_BROKEN_FILENAMES LS_COLORS OLDPWD PGUSER PWD SHLVL STY TERM TERMCAP XAUTHORITY GCC_SPECS PS1
+          MAIL USER LOGNAME HOME HIST.* PATH/;
     my $skipre = qr{\b(?:$skipnames)\b};
 
     for my $e (sort { $a cmp $b } keys %{$data{ENV}}) {
