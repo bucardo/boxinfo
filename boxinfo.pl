@@ -5,7 +5,7 @@
 ## Output in HTML or MediaWiki friendly format
 ##
 ## Greg Sabino Mullane <greg@endpoint.com>
-## Copyright End Point Corporation 2008-2010
+## Copyright End Point Corporation 2008-2017
 ## BSD licensed
 ## See: http://bucardo.org/wiki/Boxinfo
 
@@ -16,7 +16,7 @@ use Data::Dumper   qw{ Dumper     };
 use Getopt::Long   qw{ GetOptions };
 use File::Basename qw{ basename   };
 
-our $VERSION = '1.4.1';
+our $VERSION = '1.5.0';
 
 my $USAGE = "Usage: $0 <options>
  Important options:
@@ -514,6 +514,10 @@ sub gather_memory {
             ['Inactive', 'Inactive|Inact_clean'],
             ['Swap Total', 'SwapTotal'],
             ['Swap Free', 'SwapFree'],
+            ['HPsize', 'Hugepagesize'],
+            ['HPtotal', 'HugePages_Total'],
+            ['HPfree', 'HugePages_Free'],
+            ['HPreserved', 'HugePages_Rsvd'],
             );
         for (@memstuff) {
             my ($name,$olabel) = @$_;
@@ -526,11 +530,17 @@ sub gather_memory {
                     $found = 1;
                     last;
                 }
+                elsif ($info =~ /$label:\s+(\d+)/) {
+                  $data{memory}{$name} = $1;
+                  $found = 1;
+                  last;
+                }
             }
-            if (!$found) {
-                $quiet or warn qq{Could not determin "$name" from meminfo output\n};
+            if (!$found and $name !~ /^HP/) {
+                $quiet or warn qq{Could not determine "$name" from meminfo output\n};
             }
         }
+
         ## Now shared memory settings
         for my $name (qw/shmmax shmmni shmall/) {
             run_command("cat /proc/sys/kernel/$name", 'tmp_shm');
@@ -555,11 +565,17 @@ sub gather_memory {
         ## Future: parse the above
 
         ## Major VM tunables
-        for my $vm (qw/swappiness dirty_ratio dirty_background_ratio/) {
+        for my $vm (qw/swappiness dirty_ratio dirty_background_ratio nr_hugepages/) {
             run_command("cat /proc/sys/vm/$vm", 'tmp_swap');
             if ($data{'tmp_swap'} =~ /\d/) {
                 $data{vm}{$vm} = $data{'tmp_swap'};
             }
+        }
+
+        ## Huge pages
+        run_command('cat /sys/kernel/mm/transparent_hugepage/enabled', 'tmp_hugetemp');
+        if ($data{tmp_hugetemp} =~ /always/) {
+            $data{memory}{transparent_hugepages} = $data{tmp_hugetemp};
         }
 
     }
@@ -1613,15 +1629,35 @@ sub gather_postgresinfo {
         die $pinfo if $pinfo !~ /PostgreSQL (\S+)/;
         my $ver = $1;
         $c->{version}{full} = $ver;
-        ## May be something like: 8.4beta1
-        $ver =~ /^(\d+)\.(\d+)(.+)/ or die "Could not determine Postgres version from: $ver\n";
-        $c->{version}{major} = $1;
-        $c->{version}{minor} = $2;
-        $ver = $c->{version}{majmin} = "$1.$2";
-        ($c->{version}{revision} = $3) =~ s/^\.//;
+
+        if ($ver =~ /^(\d+)beta/) { ## e.g. 10beta1
+           $c->{version}{major} = $c->{version}{majmin} = $1;
+           $c->{version}{minor} = 0;
+        }
+        elsif ($ver =~ /^(\d+)\.(\d+)beta/) { ## e.g. 9.4beta1
+           $c->{version}{major} = $1;
+           $c->{version}{minor} = $2;
+           $c->{version}{majmin} = "$1$2";
+        }
+        elsif ($ver =~ /^(\d+)\.(\d+)\.(\d+)/) { ## e.g. 9.4.5
+            $c->{version}{major} = $1;
+            $c->{version}{minor} = $2;
+            $c->{version}{revision} = $3;
+            $ver = $c->{version}{majmin} = "$1.$2";
+        }
+        elsif ($ver =~ /^(\d+)\.(\d+)/) { ## e.g. 10.1
+            $c->{version}{major} = $c->{version}{majmin} = $1;
+            $c->{version}{minor} = 0;
+            $c->{version}{revision} = $2;
+        }
+        else {
+            die "Could not determine Postgres version from: $ver\n";
+        }
+        $c->{version}{revision} ||= 0;
+
 
         ## Tablespace info
-        if ($ver >= 9.2) {
+        if ($c->{version}{majmin} >= 9.2) {
             $SQL = 'SELECT spcname, spcowner, pg_tablespace_location(oid) as spclocation, spcacl FROM pg_tablespace';
 		} else {
             $SQL = 'SELECT spcname, spcowner, spclocation, spcacl FROM pg_tablespace';
@@ -1636,7 +1672,7 @@ sub gather_postgresinfo {
         }
 
         $SQL = 'SELECT name,source,unit,setting FROM pg_settings';
-        if ($ver < 8.2) {
+        if ($c->{version}{majmin} < 8.2) {
             $SQL =~ s/unit/'?' AS unit/;
         }
         run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL"}, 'tmp_psql');
@@ -1796,7 +1832,7 @@ sub gather_postgresinfo {
             my $info = $c->{db}{$db};
             next if $info->{canconn} eq 'No';
             my $qdb = $info->{quoted_db_name};
-            $SQL = $ver >= 8.3 ? $SQL83 : $SQL82;
+            $SQL = $c->{version}{majmin} >= 8.3 ? $SQL83 : $SQL82;
             run_command(qq{psql -X -t -A $usedir -p $port -c "$SQL" --dbname "$qdb"}, 'tmp_psql');
             $pinfo = $data{tmp_psql};
             die $pinfo if $pinfo =~ /ERROR/ or $pinfo =~ /FATAL/;
@@ -2336,6 +2372,8 @@ table.boxinfo td.activeip { color: black; font-weight: bolder; }
 
     html_shared_active();
 
+    html_hugepages();
+
     html_lifekeeper();
 
     html_heartbeat();
@@ -2635,6 +2673,29 @@ sub html_shared_active {
     return;
 
 } ## end of html_shared_active
+
+
+sub html_hugepages {
+
+    return if ! exists $data{memory}{transparent_hugepages};
+
+    print qq{<tr><th$vtop>${wrap}Huge pages:</th><td><br /><table class="plain">};
+    print qq{<tr><td>Huge Page size: </td><td style="text-align: right"><b>$data{memory}{pretty}{HPsize}</b></td></tr>\n};
+    my $total_huge_pretty = pretty_size($data{memory}{HPtotal} * $data{memory}{HPsize});
+    print qq{<tr><td>Huge Pages total: </td><td style="text-align: right"><b>$data{memory}{HPtotal}</b> ($total_huge_pretty)</td></tr>\n};
+    my $free_huge_pretty = pretty_size($data{memory}{HPfree} * $data{memory}{HPsize});
+    print qq{<tr><td>Huge Pages free: </td><td style="text-align: right"><b>$data{memory}{HPfree}</b> ($free_huge_pretty)</td></tr>\n};
+    my $reserved_huge_pretty = pretty_size($data{memory}{HPreserved} * $data{memory}{HPsize});
+    print qq{<tr><td>Huge Pages reserved: </td><td style="text-align: right"><b>$data{memory}{HPreserved}</b> ($reserved_huge_pretty)</td></tr>\n};
+    print qq{<tr><td>Transparent hugepages: </td><td style="text-align: right"><b>$data{memory}{transparent_hugepages}</b></td></tr>\n};
+    print qq{</table></td></tr>\n\n};
+
+    return;
+
+
+
+
+} ## end of html_hugepages
 
 
 sub html_lifekeeper {
