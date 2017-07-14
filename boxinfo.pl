@@ -669,7 +669,7 @@ sub gather_mounts {
             if ($line =~ m{^(.+?) on (.+?) type (.+?) \((.+)\)\s*(.*)}) {
                 my ($dev,$dir,$type,$options,$label) = ($1,$2,$3,$4,$5);
                 $data{fs}{$dev} = {dir => $dir, type => $type, options => $options, readahead => '', scheduler => ''};
-                if ($dev =~ m{^\/dev\/([a-z]+)\d*$}) {
+                if ($dev =~ m{^\/dev\/([a-z0-9]+?)p*\d*$}) {
                     my $name = $1;
                     if (! exists $data{block}{$name}) {
                         run_command("cat /sys/block/$name/queue/read_ahead_kb", 'tmp_readahead');
